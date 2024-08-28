@@ -51,31 +51,53 @@
 			<h2>Your Information</h2>
 			<p><strong>Note:</strong> All dates should be formatted as <span id="dateFormat">YYYY-MM-DD</span>.</p>
 
-<!--      <div class="fieldHolder">-->
-<!--        <label for="groupSel">Select the group</label>-->
-<!--        <select id="groupSel">-->
-<!--          <option disabled selected>Select the group</option>-->
-<!--          &lt;!&ndash; Options will be populated dynamically &ndash;&gt;-->
-<!--        </select>-->
-<!--      </div>-->
-
-<!--      <div class="fieldHolder" style="display: none"> &lt;!&ndash; Only display this if the collective agreement has more than one classification &ndash;&gt;-->
-<!--				<label for="classSel">Select the classification</label>-->
-<!--				<select id="classSel">-->
-<!--          <option disabled selected>Select the classification</option>-->
-<!--          &lt;!&ndash; Options will be populated dynamically &ndash;&gt;-->
-<!--        </select>-->
-<!--			</div>-->
-
-<!--      <div class="fieldHolder">-->
-<!--        <label for="CASel">Select the collective agreement</label>-->
-<!--        <select id="CASel">-->
-<!--          <option disabled selected>Select the collective agreement</option>-->
-<!--          &lt;!&ndash; Options will be populated dynamically &ndash;&gt;-->
-<!--        </select>-->
-<!--      </div>-->
-
-
+      <div class="fieldHolder">
+        <label class="form-label" for="groupSelect">Select the group</label>
+        <select class="form-select"  id="groupSelect">
+          <option disabled selected>Select the group</option>
+          <!-- Options will be populated dynamically -->
+        </select>
+      </div>
+      <div class="fieldHolder"> <!-- Only display this if the collective agreement has more than one classification -->
+				<label class="form-label" for="classificationSelect">Select the classification</label>
+				<select class="form-select"  id="classificationSelect">
+          <option disabled selected>Select the classification</option>
+          <!-- Options will be populated dynamically -->
+        </select>
+			</div>
+      <div class="fieldHolder">
+        <label class="form-label" for="CASelect">Select the collective agreement</label>
+        <select class="form-select"  id="CASelect">
+          <option disabled selected>Select the collective agreement</option>
+          <!-- Options will be populated dynamically -->
+        </select>
+      </div>
+			<div class="fieldHolder">
+				<label class="form-label" for="levelSelect">Select your starting Level for this {calculation} (of your substantive position)</label>
+				<select class="form-select" id="levelSelect">
+					<option disabled selected>Select your level</option>
+					<!-- Options will be populated dynamically -->
+				</select>
+			</div>
+			<div class="fieldHolder">
+				<label class="form-label" for="startDateTxt">When did you start at that level?</label>
+				<p id="startDateDesc">For example, if you started as an IT-02 on March 15, 2015, enter
+					<time>2015-03-15</time>
+					.
+				</p>
+				<input class="form-control" type="date" id="startDateTxt" aria-describedby="dateFormat startDateDesc" value=""
+							 required>
+			</div>
+			<div class="fieldHolder">
+				<label class="form-label" for="stepSelect">Select your salary (of your substantive position) for this {calculation}
+					<!--<time datetime="2021-12-22" id="calcStartDate">December 22, 2021</time>-->
+					<!--(of your substantive position)-->
+				</label>
+				<select class="form-select" id="stepSelect" required>
+					<option disabled selected>Select your step</option>
+					<!-- Options will be populated dynamically -->
+				</select>
+			</div>
 
 		</form>
 		<!--
@@ -99,6 +121,7 @@
 			</table>
 		</div>
 		-->
+			<section id="payTablesSect"></section>
 		</main>
 		<footer>
 			<h2>Note</h2>
@@ -109,7 +132,7 @@
 		<div id="resultStatus" role="status" aria-live="polite" class="invisibleStuff"></div>
 		<dl>
 			<dt>Last Modified:</dt>
-			<dd><time id="lastModTime" datetime="2023-09-19">2023-09-19</time</dd>
+			<dd><time id="lastModTime" datetime="2023-09-19">2023-09-19</time></dd>
 		</dl>
 		</footer>
 	</body>

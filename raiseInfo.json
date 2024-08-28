@@ -76,7 +76,7 @@
 
 	},
 	"CFIA-IN Group" : {
-		"IN": {
+		"CS": {
 			"2021-2025" : {
 				"salaries" : {
 					"annual" : [
@@ -116,7 +116,7 @@
 				"TAEnd" : "2025-06-01"
 			}
 		},
-		"IN2": {
+		"CS2": {
 			"2021-2025" : {
 				"salaries" : {
 					"annual" : [

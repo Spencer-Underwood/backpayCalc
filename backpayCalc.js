@@ -13,6 +13,7 @@
  */
 
 // #region variables
+// Global configuration variables
 var dbug = true;
 let data = {};
 let i18n = {};
@@ -22,29 +23,33 @@ var updateHash = true;
 var saveValues = null;
 var showExtraCols = true;
 
-// Collective agreement variables
+// Collective Agreement variables
 var group = null;
-var groupSel = null;
 var classification = null;
-var classSel = null;
 var chosenCA = null;
-var CASel = null;
-
-
 var level = -1;
 var step = -1;
-var levelSel = null;
-var stepSelect = null;
+var groupSel = document.getElementById("groupSelect");
+var classSel = document.getElementById("classificationSelect");
+var CASel = document.getElementById("CASelect");
+var levelSel = document.getElementById("levelSelect");
+var stepSel = document.getElementById("stepSelect");
 
-var mainForm = null;
-var startingSalary = 0;
+// Form elements
+var mainForm = document.getElementById("mainForm");
 var resultsDiv = null;
-var startDateTxt = null;
-var numPromotions = null;
 var addPromotionBtn = null;
 var addActingBtn = null;
 var addOvertimeBtn = null;
 var addLwopBtn = null;
+var resultsBody = null;
+var resultsFoot = null;
+var resultsTheadTR = null;
+
+// Maths Stuff ?
+var numPromotions = null;
+var startDateTxt = null;
+var startingSalary = 0;
 var addLumpSumBtn = null;
 var resultStatus = null;
 var calcStartDate = null;
@@ -53,9 +58,6 @@ var TABegin = new Date("2021", "11", "22");		// Remember months:  0 == Janaury, 
 var EndDate = new Date("2024", "02", "17");		// This is the day after this should stop calculating; same as endDateTxt.value in the HTML
 var day = (1000 * 60 * 60 * 24);
 var parts = [];
-var resultsBody = null;
-var resultsFoot = null;
-var resultsTheadTR = null;
 var periods = [];
 var initPeriods = [];
 var lumpSumPeriods = {};
@@ -114,7 +116,43 @@ function init() {
 	else
 		createGroupSelect
 	* */
-	createGroupSelect ();
+	populateGroupSelect ();
+
+	// Reset classification and CA selectors when group is changed
+	groupSel.addEventListener("change", function () {
+		group = groupSel.value;
+		resetSelectors("groupSel");
+		populateClassificationSelect();
+	}, false);
+
+	// When the classification changes, reset the CA selector
+	classSel.addEventListener("change", function () {
+		classification = classSel.value;
+		resetSelectors("classSel");
+		populateCASelect();
+
+	}, false);
+
+	// When the collective agreement changes update the level selector
+	CASel.addEventListener("change", function () {
+		chosenCA = CASel.value;
+		resetSelectors("CASel");
+		populateLevelSelect();
+		}, false);
+
+	// When the levels change update the steps
+	levelSel.addEventListener("change", function () {
+		level = levelSel.value
+		resetSelectors("levelSel");
+		populateStepSelect();
+		}, false);
+
+	// When the steps change ... do something
+	stepSel.addEventListener("change", function () {
+		step = stepSel.value
+		resetSelectors("stepSel"); // Not strictly needed, but may as well keep the pattern going right?
+		}, false);
+
 } // End of init
 
 function oldinit () {
@@ -123,8 +161,8 @@ function oldinit () {
 	var calcBtn = document.getElementById("calcBtn");
 	levelSel = document.getElementById("levelSelect");
 	//if (updateHash) levelSel.addEventListener("change", saveValue, false);
-	stepSelect = document.getElementById("stepSelect");
-	//if (updateHash) stepSelect.addEventListener("change", saveValue, false);
+	stepSel = document.getElementById("stepSel");
+	//if (updateHash) stepSel.addEventListener("change", saveValue, false);
 	resultsDiv = document.getElementById("resultsDiv");
 	startDateTxt = document.getElementById("startDateTxt");
 	//if (updateHash) startDateTxt.addEventListener("change", saveValue, false);
@@ -160,7 +198,7 @@ function oldinit () {
 		results[r] = document.getElementById(r);
 	}*/
 	if (dbug) console.log("init::MainForm is " + mainForm + ".");
-	if (levelSel && stepSelect && mainForm && startDateTxt && calcBtn && addActingBtn && addPromotionBtn) {
+	if (levelSel && stepSel && mainForm && startDateTxt && calcBtn && addActingBtn && addPromotionBtn) {
 		if (dbug) console.log ("Adding change event to calcBtn.");
 		levelSel.addEventListener("change", populateSalary, false);
 		if (levelSel.value.match(/[1-5]/)) populateSalary();
@@ -179,109 +217,32 @@ function oldinit () {
 	handleHash ();
 } // End of oldinit
 
-function createGroupSelect (bookmarkGroup = null) {
-	if (!document.getElementById("groupSel")) {
-		let div = createHTMLElement("div", {"parentNode": mainForm, "class": "fieldHolder"});
-		let lbl = createHTMLElement("label", {
-			"parentNode": div,
-			"for": "groupSel",
-			"textNode": i18n["selectGroup"][lang]
-		});
-
-		// Create group selector and first default element
-		groupSel = createHTMLElement("select", {"parentNode": div, "id": "groupSel"});
-		createHTMLElement("option", {
-			"parentNode": groupSel,
-			"textNode": "--" + i18n["selectGroup"][lang] + "--",
-			"disabled": true,
-			"selected": true
-		});
-
-		// Add a change handler for this to add the next thing
-		groupSel.addEventListener("change", function () {
-			group = groupSel.value;
-			// Reset classification and CA selectors
-            if (classSel) { classSel.selectedIndex = 0; classSel.length = 1; }
-            if (CASel) { CASel.selectedIndex = 0; CASel.length = 1; }
-			createOrUpdateClassificationSelect();
-		}, false);
-	}
-
-	// This *should* only ever run once, but keeping this here to maintain consistency with the other two createOrUpdates
+function populateGroupSelect (bookmarkGroup = null) {
+	// This *should* only ever run once
 	for (const group in data) {
 		let attributes = { "parentNode": groupSel, "textNode": group, "value": group};
 		if (group === bookmarkGroup) { attributes["selected"] = true; } // Add something for the bookmarks
-
 		createHTMLElement("option", attributes);
 	}
-} // End of createGroupSelect
+} // End of populateGroupSelect
 
-function createOrUpdateClassificationSelect (bookmarkClassification = null) {
-	//Only create the classification selector the *first* time this is ran
-	if (!document.getElementById("classSel")) {
-		let div = createHTMLElement("div", {"parentNode": mainForm, "class": "fieldHolder"});
-		let lbl = createHTMLElement("label", {
-			"parentNode": div,
-			"for": "classSel",
-			"textNode": i18n["selectClass"][lang]
-		});
-
-		classSel = createHTMLElement("select", {"parentNode": div, "id": "classSel"});
-		createHTMLElement("option", {
-			"parentNode": classSel,
-			"textNode": " -- " + i18n["selectClass"][lang] + " --",
-			"selected": true,
-			"disabled": true
-		});
-
-		// When this changes, update the CA selector
-		classSel.addEventListener("change", function () {
-			classification = classSel.value;
-            createOrUpdateCASelect();
-            if (CASel) { CASel.selectedIndex = 0; }
-		}, false);
-	}
-
-	// *Every* time this function is invoked, clear out the dropdown and populate it with the new options.
+function populateClassificationSelect (bookmarkClassification = null) {
+	// When this function is invoked, clear out the dropdown and populate it with the new options.
 	classSel.length = 1;
 	for (const classifications in data[group]) {
 		let attributes = { "parentNode": classSel, "textNode": classifications};
 		if (bookmarkClassification === classifications) { attributes["selected"] = true; }
 		createHTMLElement("option", attributes);
 	}
-
 	// If there's exactly one classification, select it and skip to the CA selector
 	if ( Object.keys(data[group]).length === 1) {
 		classSel.selectedIndex = 1;
 		classification = classSel.value;
-		createOrUpdateCASelect();
+		populateCASelect();
 	}
+} // End of populateClassificationSelect
 
-} // End of createOrUpdateClassificationSelect
-
-function createOrUpdateCASelect(bookmarkCA = null) {
-	// Only create the CA selector the very first time this is invoked.
-	if (!document.getElementById("CASel")) {
-		let div = createHTMLElement ("div", {"parentNode":mainForm, "class":"fieldHolder"});
-		let lbl = createHTMLElement ("label", {"parentNode":div, "for":"CASel", "textNode":i18n["selectCALbl"][lang]});
-		CASel = createHTMLElement ("select", {"parentNode":div, "id":"CASel"});
-
-		console.log ("Dealing with classification: " + classification + ".");
-		createHTMLElement("option", {
-			"parentNode": CASel, "textNode": " -- " + i18n["selectCALbl"][lang] + " --",
-			"selected": true,
-			"disabled": true
-		});
-
-		// Add a change handler for this to add the next thing
-		// What's next?
-		// Now we know what CA, we now need to determine a Start Date
-		CASel.addEventListener("change", function () {
-			chosenCA = CASel.value;
-			askStartDate();
-		}, false);
-	}
-
+function populateCASelect(bookmarkCA = null) {
 	// Delete all options and create new options every time  this is invoked.
 	CASel.length = 1;
 	for (const CA in data[group][classification]) {
@@ -289,24 +250,52 @@ function createOrUpdateCASelect(bookmarkCA = null) {
 		if (CA === bookmarkCA) { attributes["selected"] = true; }
 		createHTMLElement("option", attributes);
 	}
-} // End of createOrUpdateCASelect
+} // End of populateCASelect
 
-function askStartDate () {
-	if (!document.getElementById("askStartDateFS")) {
-		let askStartDateFS = createHTMLElement("fieldset", {"parentNode": mainForm, "id":"askStartDateFS"});
-		let askStartDateLgndTxt = i18n["startDateLgnd"][lang].replace("{{classification}}", classification).replace("{{startDate}}", data[classification][chosenCA]["TABegin"]);
-		let askStartDateLgnd = createHTMLElement("legend", {"parentNode": askStartDateFS, "textNode" : askStartDateLgndTxt});
-		let yesHolderDiv = createHTMLElement("div", {"parentNode" : askStartDateFS});
-		let noHolderDiv = createHTMLElement("div", {"parentNode" : askStartDateFS});
-		let yesRB = createHTMLElement("input", {"parentNode" : yesHolderDiv, "id" : "yesRB", "type" : "radio", "name" : "startDateRBs"});
-		let yesRBLbl = createHTMLElement("label", {"parentNode" : yesHolderDiv, "for" : "yesRB", "textNode" : i18n["yesTxt"][lang]});
-		let noRB = createHTMLElement("input", {"parentNode" : noHolderDiv, "id" : "noRB", "type" : "radio", "name" : "startDateRBs"});
-		let noRBLbl = createHTMLElement("label", {"parentNode" : noHolderDiv, "for" : "noRB", "textNode" : i18n["noTxt"][lang]});
+function populateLevelSelect(bookmarkLevel = null){
+	levelSel.length = 1;
 
-		yesRB.addEventListener("change", function () {}, false);
+	let levels = data[group][classification][chosenCA].salaries.annual;
+    for (let i = 0; i < levels.length; i++) {
+		let attributes = {"parentNode": levelSel, "textNode": `${classification}-${i + 1}`, "value": i};
+		if (i === bookmarkLevel) { attributes["selected"] = true; }
+		createHTMLElement("option", attributes);
+    }
+} // End of populateLevelSelect
+
+function populateStepSelect(bookmarkStep = null){
+	let steps =  data[group][classification][chosenCA].salaries.annual[level];
+
+	for (let i = 0; i < steps.length; i++) {
+		let attributes = {"parentNode": stepSel, "textNode": steps[i], "value": i};
+		if (i === bookmarkStep) { attributes["selected"] = true; }
+		createHTMLElement("option", attributes);
+    }
+} // End of populateStepSelect
+
+// Only a convenience function for the group / level / etc selectors. Do not use elsewhere, won't work as expected!
+function resetSelectors(selector){
+	switch (selector) {
+		case "groupSel" :
+			classSel.length = 1;
+			classSel.selectedIndex = 0;
+			/* falls through */
+		case "classSel" :
+			CASel.selectedIndex = 0;
+			CASel.length = 1;
+			/* falls through */
+		case "CASel" :
+			levelSel.selectedIndex = 0;
+			levelSel.length = 1;
+			/* falls through */
+		case "levelSel" :
+			stepSel.selectedIndex = 0;
+			stepSel.length = 1;
+			/* falls through */
+		case "stepSel" :
+			break;
 	}
-} // End of askStartDate
-
+}
 
 // Check the document location for saved things
 function handleHash () {
@@ -337,7 +326,7 @@ function handleHash () {
 	}
 	if (params.has("stp")) {
 		let stp = params.get("stp").replace(/\D/g, "");
-		stepSelect.selectedIndex = stp;
+		stepSel.selectedIndex = stp;
 		toCalculate = toCalculate | 4;
 		hasHash = true;
 	}
@@ -347,7 +336,7 @@ function handleHash () {
 		if (params.get("stp")) {
 			let stp = params.get("stp").replace(/\D/g, "");
 			console.log ("And gonna set it now to " + stp + ".");
-			stepSelect.selectedIndex = stp;
+			stepSel.selectedIndex = stp;
 			toCalculate = toCalculate | 4;
 		}}, 0);
 	*/
@@ -472,7 +461,7 @@ function setURL () {
 	/*
 	if (levelSel) saveValues["lvl"] = levelSel.selectedIndex);
 	if (startDateTxt.value) ("strtdt=" +  startDateTxt.value);
-	if (stepSelect) params.push("stp=" +  stepSelect.selectedIndex);
+	if (stepSel) params.push("stp=" +  stepSel.selectedIndex);
 	if (endDateTxt.value) params.push("enddt=" +  endDateTxt.value);
 
 	newURL += "?" + params.join("&");
@@ -504,11 +493,11 @@ function setURL () {
    Populates the Salary Select basedon the CS-0x level selected
 */
 function populateSalary () {
-	removeChildren(stepSelect);
+	removeChildren(stepSel);
 	if (levelSel.value >0 && levelSel.value <= 5) {
-		createHTMLElement("option", {"parentNode":stepSelect, "value":"-1", "textNode":"Select Salary"});
+		createHTMLElement("option", {"parentNode":stepSel, "value":"-1", "textNode":"Select Salary"});
 		for (var i = 0; i < salaries[(levelSel.value-1)].length; i++) {
-			createHTMLElement("option", {"parentNode":stepSelect, "value":i, "textNode":"$" + salaries[levelSel.value-1][i].toLocaleString()});
+			createHTMLElement("option", {"parentNode":stepSel, "value":i, "textNode":"$" + salaries[levelSel.value-1][i].toLocaleString()});
 		}
 	}
 	if (startDateTxt.value.replace(/[^-\d]/, "").match(/(\d\d\d\d)-(\d\d)-(\d\d)/)) selectSalary();
@@ -546,11 +535,11 @@ function selectSalary () {
 		if (step > salaries[levelSel.value].length) step = salaries[levelSel.value].length;
 		if (dbug) console.log ("But there ain't that many steps.  so you're step " + step +".");
 
-		stepSelect.selectedIndex=step;
+		stepSel.selectedIndex=step;
 		//step = Math.min(years, salaries[levelSel.value].length);
 
 		/*
-		var opts = stepSelect.getElementsByTagName("option");
+		var opts = stepSel.getElementsByTagName("option");
 		for (var i = 0; i < opts.length; i++) {
 			if (opts[i].hasAttribute("selected")) opts[i].removeAttribute("selected");
 			if (i == step) opts[i].setAttribute("selected", "selected");
@@ -673,11 +662,11 @@ function getSalary () {
 		let timeDiff = (TABegin - startDate) / day;
 
 
-		if (stepSelect.value && stepSelect.value >= 0 && stepSelect.value < salaries[level].length) {
-			step = stepSelect.value;
-			if (dbug) console.log ("getSalary::Got step from the stepSelect.  And it's " + step + ".");
+		if (stepSel.value && stepSel.value >= 0 && stepSel.value < salaries[level].length) {
+			step = stepSel.value;
+			if (dbug) console.log ("getSalary::Got step from the stepSel.  And it's " + step + ".");
 		} else {
-			if (dbug) console.log ("getSalary::Couldn't get step from the stepSelect. Gotta guess. stepSelect.value: " + stepSelect.value + ".");
+			if (dbug) console.log ("getSalary::Couldn't get step from the stepSel. Gotta guess. stepSel.value: " + stepSel.value + ".");
 			if (dbug) console.log ("getSalary::TimeDiff: "  + timeDiff + ".");
 		
 			let years = Math.floor(timeDiff/365);
