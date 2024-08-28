@@ -12,6 +12,7 @@
  *
  */
 
+// #region variables
 var dbug = true;
 let data = {};
 let i18n = {};
@@ -20,18 +21,25 @@ var version = "3.0";
 var updateHash = true;
 var saveValues = null;
 var showExtraCols = true;
+
+// Collective agreement variables
+var group = null;
+var groupSel = null;
+var classification = null;
+var classSel = null;
+var chosenCA = null;
+var CASel = null;
+
+
 var level = -1;
 var step = -1;
+var levelSel = null;
+var stepSelect = null;
+
 var mainForm = null;
 var startingSalary = 0;
 var resultsDiv = null;
 var startDateTxt = null;
-var classification = null;
-var chosenCA = null;
-var classSel = null;
-var CASel = null;
-var levelSel = null;
-var stepSelect = null;
 var numPromotions = null;
 var addPromotionBtn = null;
 var addActingBtn = null;
@@ -90,13 +98,23 @@ var hourly = [
 //var months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 //var days = [31, 29, 31
 
+// #endregion variables
+
+
 function init() {
 	lang = document.documentElement.lang;
 	console.log ("Got lang " + lang + ".");
 	mainForm = document.getElementById("mainForm");
 
-	createClassificationSelect ();
-
+	/*
+	if (bookmark)
+		createGroupSelect(group);
+		createOrUpdateClassificationSelect(classification);
+		createOrUpdateCASelect(ca);
+	else
+		createGroupSelect
+	* */
+	createGroupSelect ();
 } // End of init
 
 function oldinit () {
@@ -126,7 +144,7 @@ function oldinit () {
 
 	if (lastModTime) {
 		lastModTime.setAttribute("datetime", lastModified.toISOString().substr(0,10));
-		lastModTime.innerHTML = lastModified.toLocaleString("en-CA", { year: 'numeric', month: 'long', day: 'numeric' });	
+		lastModTime.innerHTML = lastModified.toLocaleString("en-CA", { year: 'numeric', month: 'long', day: 'numeric' });
 	}
 	if (dbug || showExtraCols) {
 		var ths = resultsTheadTR.getElementsByTagName("th");
@@ -148,7 +166,7 @@ function oldinit () {
 		if (levelSel.value.match(/[1-5]/)) populateSalary();
 		startDateTxt.addEventListener("change", selectSalary, false);
 		if (startDateTxt.value.replace(/[^-\d]/, "").match(/YYYY-MM-DD/)) populateSalary();
-	
+
 		calcBtn.addEventListener("click", startProcess, false);
 		addActingBtn.addEventListener("click", addActingHandler, false);
 		addLwopBtn.addEventListener("click", addLWoPHandler, false);
@@ -161,40 +179,99 @@ function oldinit () {
 	handleHash ();
 } // End of oldinit
 
+function createGroupSelect (bookmarkGroup = null) {
+	if (!document.getElementById("groupSel")) {
+		let div = createHTMLElement("div", {"parentNode": mainForm, "class": "fieldHolder"});
+		let lbl = createHTMLElement("label", {
+			"parentNode": div,
+			"for": "groupSel",
+			"textNode": i18n["selectGroup"][lang]
+		});
 
-function createClassificationSelect () {
-	if (!document.getElementById("classSel")) {
-		let div = createHTMLElement ("div", {"parentNode":mainForm, "class":"fieldHolder"});
-		let lbl = createHTMLElement ("label", {"parentNode":div, "for":"classSel", "textNode":i18n["selectClass"][lang]});
-		classSel = createHTMLElement ("select", {"parentNode":div, "id":"classSel"});
-		let opt1 = createHTMLElement ("option", {"parentNode":classSel, "textNode":" -- " + i18n["selectClass"][lang] + " --"});
-
-		for (var classifications in data) {
-			let opt = createHTMLElement("option", {"parentNode":classSel, "textNode" : classifications});
-			// Add something for the bookmarks
-		}
+		// Create group selector and first default element
+		groupSel = createHTMLElement("select", {"parentNode": div, "id": "groupSel"});
+		createHTMLElement("option", {
+			"parentNode": groupSel,
+			"textNode": "--" + i18n["selectGroup"][lang] + "--",
+			"disabled": true,
+			"selected": true
+		});
 
 		// Add a change handler for this to add the next thing
-		classSel.addEventListener("change", function () {
-			classification = classSel.value;
-			createCASelect();
+		groupSel.addEventListener("change", function () {
+			group = groupSel.value;
+			// Reset classification and CA selectors
+            if (classSel) { classSel.selectedIndex = 0; classSel.length = 1; }
+            if (CASel) { CASel.selectedIndex = 0; CASel.length = 1; }
+			createOrUpdateClassificationSelect();
 		}, false);
 	}
 
-} // End of createClassificationSelect
+	// This *should* only ever run once, but keeping this here to maintain consistency with the other two createOrUpdates
+	for (const group in data) {
+		let attributes = { "parentNode": groupSel, "textNode": group, "value": group};
+		if (group === bookmarkGroup) { attributes["selected"] = true; } // Add something for the bookmarks
 
-function createCASelect () {
+		createHTMLElement("option", attributes);
+	}
+} // End of createGroupSelect
+
+function createOrUpdateClassificationSelect (bookmarkClassification = null) {
+	//Only create the classification selector the *first* time this is ran
+	if (!document.getElementById("classSel")) {
+		let div = createHTMLElement("div", {"parentNode": mainForm, "class": "fieldHolder"});
+		let lbl = createHTMLElement("label", {
+			"parentNode": div,
+			"for": "classSel",
+			"textNode": i18n["selectClass"][lang]
+		});
+
+		classSel = createHTMLElement("select", {"parentNode": div, "id": "classSel"});
+		createHTMLElement("option", {
+			"parentNode": classSel,
+			"textNode": " -- " + i18n["selectClass"][lang] + " --",
+			"selected": true,
+			"disabled": true
+		});
+
+		// When this changes, update the CA selector
+		classSel.addEventListener("change", function () {
+			classification = classSel.value;
+            createOrUpdateCASelect();
+            if (CASel) { CASel.selectedIndex = 0; }
+		}, false);
+	}
+
+	// *Every* time this function is invoked, clear out the dropdown and populate it with the new options.
+	classSel.length = 1;
+	for (const classifications in data[group]) {
+		let attributes = { "parentNode": classSel, "textNode": classifications};
+		if (bookmarkClassification === classifications) { attributes["selected"] = true; }
+		createHTMLElement("option", attributes);
+	}
+
+	// If there's exactly one classification, select it and skip to the CA selector
+	if ( Object.keys(data[group]).length === 1) {
+		classSel.selectedIndex = 1;
+		classification = classSel.value;
+		createOrUpdateCASelect();
+	}
+
+} // End of createOrUpdateClassificationSelect
+
+function createOrUpdateCASelect(bookmarkCA = null) {
+	// Only create the CA selector the very first time this is invoked.
 	if (!document.getElementById("CASel")) {
 		let div = createHTMLElement ("div", {"parentNode":mainForm, "class":"fieldHolder"});
 		let lbl = createHTMLElement ("label", {"parentNode":div, "for":"CASel", "textNode":i18n["selectCALbl"][lang]});
 		CASel = createHTMLElement ("select", {"parentNode":div, "id":"CASel"});
 
 		console.log ("Dealing with classification: " + classification + ".");
-		let opt = createHTMLElement("option", {"parentNode":CASel, "textNode" : i18n["selectCALbl"][lang]});
-		for (var CA in data[classification]) {
-			opt = createHTMLElement("option", {"parentNode":CASel, "textNode" : CA});
-			// Add something for the bookmarks
-		}
+		createHTMLElement("option", {
+			"parentNode": CASel, "textNode": " -- " + i18n["selectCALbl"][lang] + " --",
+			"selected": true,
+			"disabled": true
+		});
 
 		// Add a change handler for this to add the next thing
 		// What's next?
@@ -204,7 +281,15 @@ function createCASelect () {
 			askStartDate();
 		}, false);
 	}
-} // End of createCASelect
+
+	// Delete all options and create new options every time  this is invoked.
+	CASel.length = 1;
+	for (const CA in data[group][classification]) {
+		let attributes = { "parentNode": CASel, "textNode": CA};
+		if (CA === bookmarkCA) { attributes["selected"] = true; }
+		createHTMLElement("option", attributes);
+	}
+} // End of createOrUpdateCASelect
 
 function askStartDate () {
 	if (!document.getElementById("askStartDateFS")) {

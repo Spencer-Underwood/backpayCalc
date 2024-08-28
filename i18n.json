@@ -1,4 +1,7 @@
 {
+	"selectGroup" : {"en" : "Select your group",
+			"fr" : "Sélectionnez votre groupe"
+	},
 	"selectClass" : {"en" : "Select your classification",
 			"fr" : "Sélectionnez votre classification"
 	},
