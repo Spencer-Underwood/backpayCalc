@@ -18,6 +18,7 @@ var dbug = true;
 let data = {};
 let i18n = {};
 let lang = "en";
+var langFormat = "en-CA";
 var version = "3.0";
 var updateHash = true;
 var saveValues = null;
@@ -34,26 +35,27 @@ var classSel = document.getElementById("classificationSelect");
 var CASel = document.getElementById("CASelect");
 var levelSel = document.getElementById("levelSelect");
 var stepSel = document.getElementById("stepSelect");
-
 // Form elements
 var mainForm = document.getElementById("mainForm");
-var resultsDiv = null;
-var addPromotionBtn = null;
-var addActingBtn = null;
-var addOvertimeBtn = null;
-var addLwopBtn = null;
-var resultsBody = null;
-var resultsFoot = null;
-var resultsTheadTR = null;
-
+var lastModTime = document.getElementById("lastModTime");
+var startDateTxt = document.getElementById("startDateTxt");
+var resultStatus = document.getElementById("resultStatus");
+var calcStartDate = document.getElementById("calcStartDate");
+var endDateTxt = document.getElementById("endDateTxt");
+// Buttons
+var addPromotionBtn = document.getElementById("addPromotionBtn");
+var addActingBtn = document.getElementById("addActingBtn");
+var addOvertimeBtn = document.getElementById("addOvertimeBtn");
+var addLwopBtn = document.getElementById("addLwopBtn");
+var addLumpSumBtn = document.getElementById("addLumpSumBtn");
+// Result elements
+var resultsDiv = document.getElementById("resultsDiv");
+var resultsBody = document.getElementById("resultsBody");
+var resultsFoot = document.getElementById("resultsFoot");
+var resultsTheadTR = document.getElementById("resultsTheadTR");
 // Maths Stuff ?
 var numPromotions = null;
-var startDateTxt = null;
 var startingSalary = 0;
-var addLumpSumBtn = null;
-var resultStatus = null;
-var calcStartDate = null;
-var endDateTxt = "2024-04-15";
 var TABegin = new Date("2021", "11", "22");		// Remember months:  0 == Janaury, 1 == Feb, etc.
 var EndDate = new Date("2024", "02", "17");		// This is the day after this should stop calculating; same as endDateTxt.value in the HTML
 var day = (1000 * 60 * 60 * 24);
@@ -68,10 +70,13 @@ var lumpSums = 0;
 var overtimes = 0;
 var lwops = 0;
 var lastModified = new Date("2023", "09", "22");
-var lastModTime = null;
+
 var salaries = [];
 var daily = [];
 var hourly = [];
+var newRates = {};
+
+const WeeksInYear = 52.176;
 // taken from http://www.tbs-sct.gc.ca/agreements-conventions/view-visualiser-eng.aspx?id=1#toc377133772
 /*
 var salaries = [
@@ -107,47 +112,46 @@ function init() {
 	lang = document.documentElement.lang;
 	console.log ("Got lang " + lang + ".");
 	mainForm = document.getElementById("mainForm");
+	console.log(getStr("selectCALbl"));
+	if (dbug) {
+		group="IT Group";
+		classification="IT";
+		chosenCA="2021-2025";
+		populateGroupSelect ("IT Group");
+		populateClassificationSelect("IT");
+		populateCASelect("2021-2025");
+		let rates = generateRates();
+		generateTables(rates)
+	} else {populateGroupSelect ();}
 
-	/*
-	if (bookmark)
-		createGroupSelect(group);
-		createOrUpdateClassificationSelect(classification);
-		createOrUpdateCASelect(ca);
-	else
-		createGroupSelect
-	* */
-	populateGroupSelect ();
 
-	// Reset classification and CA selectors when group is changed
+	// Reset classification and CA selectors when group is changed. When CA is selected, display salary tables
 	groupSel.addEventListener("change", function () {
 		group = groupSel.value;
 		resetSelectors("groupSel");
 		populateClassificationSelect();
 	}, false);
 
-	// When the classification changes, reset the CA selector
 	classSel.addEventListener("change", function () {
 		classification = classSel.value;
 		resetSelectors("classSel");
 		populateCASelect();
-
 	}, false);
 
-	// When the collective agreement changes update the level selector
 	CASel.addEventListener("change", function () {
 		chosenCA = CASel.value;
 		resetSelectors("CASel");
 		populateLevelSelect();
+		let rates = generateRates();
+		generateTables(rates);
 		}, false);
 
-	// When the levels change update the steps
 	levelSel.addEventListener("change", function () {
 		level = levelSel.value
 		resetSelectors("levelSel");
 		populateStepSelect();
 		}, false);
 
-	// When the steps change ... do something
 	stepSel.addEventListener("change", function () {
 		step = stepSel.value
 		resetSelectors("stepSel"); // Not strictly needed, but may as well keep the pattern going right?
@@ -296,6 +300,193 @@ function resetSelectors(selector){
 			break;
 	}
 }
+
+function getStr (str) {
+	let rv = null;
+	try {
+		rv = i18n[str][lang];
+		let repStr = null;
+		// Not confident in this part, commenting out for now - SLU
+		// while (repStr = rv.match(/(\{\{(.*?)\}\})/)) {
+		// 	if (repStr) {
+		// 		if (repStr[2] == "startDate") {
+		// 			rv = rv.replace(repStr[1], calcStartDate.getAttribute("datetime"));
+		// 		} else if (repStr[2] == "endDate") {
+		// 			rv = rv.replace(repStr[1], EndDate.toISOString().substr(0,10));
+		// 		} else if (repStr[2] == "knownEndDate") {
+		// 			rv = rv.replace(repStr[1], knownEndDate);
+		// 		}
+		// 	}
+		// }
+	}
+	catch (ex) {
+		console.error ("Error getting Error Message String: " + ex.message + "(" + str + ")");
+	}
+	return rv;
+} // End of getStr
+
+function generateRates(collectiveAgreement = null) {
+    // If the CA is provided via the parameter, use it, otherwise use data[]
+    const CA = collectiveAgreement || data[group][classification][chosenCA];
+    const salaries = CA.salaries.annual;
+    const levels = salaries.length;
+
+    let rates = {
+        levels: levels,
+        startDate: new Date(CA.TABegin),
+        endDate: new Date(CA.TAEnd),
+        payPeriods: {
+            current: { salary: [] }
+        }
+    };
+
+    // Helper function to calculate salary breakdowns
+    const calculateSalaryBreakdown = (annual) => ({
+        annual: annual,
+        weekly: annual / WeeksInYear,
+        daily: annual / WeeksInYear / 5,
+        hourly: annual / WeeksInYear / 5 / 7.5
+    });
+
+    // Create the starting array based on the unmodified salary dollars in the JSON file
+    for (let level = 0; level < levels; level++) {
+        let steps = [];
+        for (let step = 0; step < salaries[level].length; step++) {
+            steps.push(calculateSalaryBreakdown(salaries[level][step]));
+        }
+        rates.payPeriods.current.salary.push(steps);
+    }
+
+    // Deep copy of the current salary to avoid accidental modification
+    let previousSalary = JSON.parse(JSON.stringify(rates.payPeriods.current.salary));
+    let previousCompounded = Array(levels).fill(0);
+
+    // Sort pay periods by date
+    const payPeriods = CA.periods.filter(period => period.reason === "Contractual Increase")
+                                  .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+
+    for (let i = 0; i < payPeriods.length; i++) {
+        let period = payPeriods[i];
+        rates.payPeriods[period.startDate] = { salary: [] };
+
+        if (period.increments.length === 1) {
+            period.increments = Array(levels).fill(period.increments[0]); // Apply the same increment to all levels
+        }
+
+        for (let level = 0; level < period.increments.length; level++) {
+            let incrementValue = Number(period.increments[level]);
+            let steps = [];
+            for (let step = 0; step < previousSalary[level].length; step++) {
+                let annual = previousSalary[level][step].annual * (1 + incrementValue / 100);
+                steps.push(calculateSalaryBreakdown(annual));
+            }
+            rates.payPeriods[period.startDate].salary.push(steps);
+        }
+        rates.payPeriods[period.startDate].increments = period.increments;
+        rates.payPeriods[period.startDate].compounded = previousCompounded.map(
+            (prev, idx) => parseFloat(((1 + prev / 100) * (1 + period.increments[idx] / 100) - 1) * 100).toFixed(6)
+        );
+
+        // Update previous values for the next iteration
+        previousSalary = JSON.parse(JSON.stringify(rates.payPeriods[period.startDate].salary));
+        previousCompounded = [...rates.payPeriods[period.startDate].compounded];
+    }
+
+    return rates;
+} // End of generateRates
+
+
+function generateTables(rates) {
+    // TODO: handle options or parameters or whatnot
+    let payTablesSection = document.getElementById("payTablesSection");
+    let timeps = ["annual", "weekly", "daily", "hourly"];
+    let levels = rates.levels;
+
+    // Create tables for each level
+    for (let level = 0; level < levels; level++) {
+        let levelText = `${classification}-${level + 1}`;
+        let newSection = createHTMLElement("details", { parentNode: payTablesSection, id: `payrateSect${level}` });
+        let newSummary = createHTMLElement("summary", { parentNode: newSection });
+        createHTMLElement("h3", { parentNode: newSummary, textNode: levelText });
+
+        let yearSect = createHTMLElement("section", { parentNode: newSection, class: "yearSect" });
+        createHTMLElement("h4", { parentNode: yearSect, textNode: `${getStr("current")} (${rates.startDate.toISOString().slice(0, 10)})` });
+        let respDiv = createHTMLElement("div", { parentNode: yearSect, class: "tables-responsive" });
+
+        let newTable = createHTMLElement("table", { parentNode: respDiv, class: "table caption-top" });
+        let newTHead = createHTMLElement("thead", { parentNode: newTable });
+        let newTR = createHTMLElement("tr", { parentNode: newTHead });
+
+        // Create table headers for steps
+        createHTMLElement("td", { parentNode: newTR, textNode: "" });
+        for (let step = 0; step < rates.payPeriods.current.salary[level].length; step++) {
+            createHTMLElement("th", { parentNode: newTR, textNode: `${getStr("step")} ${step + 1}`, scope: "col" });
+        }
+
+        // Create table body for current salary values
+        let newTBody = createHTMLElement("tbody", { parentNode: newTable });
+        timeps.forEach(t => {
+            let row = createHTMLElement("tr", { parentNode: newTBody });
+            createHTMLElement("th", { parentNode: row, textNode: getStr(t), scope: "row" });
+            for (let step = 0; step < rates.payPeriods.current.salary[level].length; step++) {
+                createHTMLElement("td", { parentNode: row, textNode: getNum(rates.payPeriods.current.salary[level][step][t]) });
+            }
+        });
+
+        // Iterate over pay periods in the payPeriods object, skipping 'current'
+		// TODO: Add a row for
+        for (let period in rates.payPeriods) {
+            if (period === "current") continue;
+
+            let payPeriod = rates.payPeriods[period];
+
+            let newYearSect = createHTMLElement("section", { parentNode: newSection, class: "yearSect" });
+            createHTMLElement("h4", { parentNode: newYearSect, textNode: period });
+            let respDiv = createHTMLElement("div", { parentNode: newYearSect, class: "tables-responsive" });
+
+            let newTable = createHTMLElement("table", { parentNode: respDiv, class: "table caption-top" });
+            let newTHead = createHTMLElement("thead", { parentNode: newTable });
+            let newTR = createHTMLElement("tr", { parentNode: newTHead });
+
+            createHTMLElement("td", { parentNode: newTR, textNode: "" });
+            for (let step = 0; step < payPeriod.salary[level].length; step++) {
+                createHTMLElement("th", { parentNode: newTR, textNode: `${getStr("step")} ${step + 1}`, scope: "col" });
+            } 
+
+            let newTBody = createHTMLElement("tbody", { parentNode: newTable });
+            timeps.forEach(t => {
+                let row = createHTMLElement("tr", { parentNode: newTBody });
+                createHTMLElement("th", { parentNode: row, textNode: getStr(t), scope: "row" });
+                for (let step = 0; step < payPeriod.salary[level].length; step++) {
+                    createHTMLElement("td", { parentNode: row, textNode: getNum(payPeriod.salary[level][step][t]) });
+                }
+            });
+
+
+        }
+    }
+    console.debug("breakpoint here");
+} // End of generateTables
+
+function getNum(num) {
+	// These options are needed to round to whole numbers if that's what you want.
+	//minimumFractionDigits: 0, // (this suffices for whole numbers, but will print 2500.10 as $2,500.1)
+	//maximumFractionDigits: 0, // (causes 2500.99 to be printed as $2,501)
+	// Taken from https://stackoverflow.com/questions/149055/how-to-format-numbers-as-currency-string
+	const formatter = new Intl.NumberFormat(langFormat, {style: 'currency', currency: 'CAD',});
+	let showPrecise = false;
+	let calcRounded = false;
+	if (showPrecise) {
+		if (calcRounded) {
+			return formatter.format(num);
+		} else {
+			return num;
+		}
+	} else {
+		return formatter.format(num);
+	}
+} // End of getNum
+
 
 // Check the document location for saved things
 function handleHash () {
@@ -1920,7 +2111,7 @@ async function getData () {
 	if (response.ok) { // if HTTP-status is 200-299
 		// get the response body (the method explained below)
 		data = await response.json();
-		if (dbug) console.log ("Got json: "  + JSON.stringify(data) + ".");
+		// if (dbug) console.log ("Got json: "  + JSON.stringify(data) + ".");
 		//salaries = json["IT"]["2018-2021"]["salaries"]["annual"];
 		//daily = json["IT"]["2018-2021"]["salaries"]["daily"];
 		//hourly = json["IT"]["2018-2021"]["salaries"]["hourly"];
