@@ -1,4 +1,5 @@
-/*
+/*  backpayCalc.js
+ *  Inspired from and heavily modified from ardew nordlands code.
  *	To-do:
  *		* Fix anniversary problem								- Fixed
  *		* Deal with anniversary dates == contract dates						- Done
@@ -12,11 +13,12 @@
  *
  */
 
+import { data } from './raiseInfo.js';
+import { i18n } from './i18n.js';
+
 // #region variables
 // Global configuration variables
 var dbug = true;
-let data = {};
-let i18n = {};
 let lang = "en";
 var langFormat = "en-CA";
 var version = "3.0";
@@ -24,17 +26,52 @@ var updateHash = true;
 var saveValues = null;
 var showExtraCols = true;
 
+const WeeksInYear = 52.176;
+
+// I'm hoping this singleton makes it
+// const appData = (function() {
+//     let lang = null;
+// 	let group = null;
+//     let classification = null;
+//     let CA = null;
+// 	let level = -1;
+// 	let step = -1;
+//
+//     return { /* API calls */
+//         // Getters
+// 		getLang: function() { return lang },
+//         getGroup: function() { return group; },
+//         getClassification: function() { return classification; },
+//         getCA: function() { return CA;},
+// 		getLevel: function() { return level;},
+// 		getStep: function() { return step;},
+// 		getWeeksInYear: function() {return 52.176;},
+//         // Setters
+// 		setLang: function(newlang) { lang = newlang },
+//         setGroup: function(newGroup) { group = newGroup; },
+//         setClassification: function(newClassification) { classification = newClassification; },
+//         setCA: function(newCA) { CA = newCA; },
+// 		setLevel: function(newLevel) { level = newLevel; },
+// 		setStep: function(newStep) { step = newStep; },
+//     };
+// })();
+
 // Collective Agreement variables
-var group = null;
-var classification = null;
-var chosenCA = null;
-var level = -1;
-var step = -1;
-var groupSel = document.getElementById("groupSelect");
-var classSel = document.getElementById("classificationSelect");
-var CASel = document.getElementById("CASelect");
-var levelSel = document.getElementById("levelSelect");
-var stepSel = document.getElementById("stepSelect");
+let group = null;
+let classification = null;
+let chosenCA = null;
+let level = -1;
+let step = -1;
+
+// Helper function to skip directly to CA when group / class / CA are defined.
+data.chosenCA = undefined; // Only needed so my IDE recognizes this exists
+Object.defineProperty(data, 'chosenCA', {
+    get: function() { return this[group][classification][chosenCA]; },
+    enumerable: false // Ensure this property is not enumerated
+});
+
+//let levelSel = document.getElementById("levelSelect");
+//var stepSel = document.getElementById("stepSelect");
 // Form elements
 var mainForm = document.getElementById("mainForm");
 var lastModTime = document.getElementById("lastModTime");
@@ -64,19 +101,19 @@ var periods = [];
 var initPeriods = [];
 var lumpSumPeriods = {};
 var overtimePeriods = {};
-var promotions = 0;
+//var promotions = 0;
 var actings = 0;
 var lumpSums = 0;
 var overtimes = 0;
 var lwops = 0;
 var lastModified = new Date("2023", "09", "22");
 
-var salaries = [];
+//var salaries = [];
 var daily = [];
 var hourly = [];
 var newRates = {};
 
-const WeeksInYear = 52.176;
+
 // taken from http://www.tbs-sct.gc.ca/agreements-conventions/view-visualiser-eng.aspx?id=1#toc377133772
 /*
 var salaries = [
@@ -108,64 +145,73 @@ var hourly = [
 // #endregion variables
 
 
-function init() {
+function main() {
+	console.log("Got data:", data);
+	console.log("Got i18n: ", i18n);
+
 	lang = document.documentElement.lang;
-	console.log ("Got lang " + lang + ".");
-	mainForm = document.getElementById("mainForm");
-	console.log(getStr("selectCALbl"));
+	console.debug("Got lang " + lang);
+	generateAllRates();
+	
 	if (dbug) {
 		group="IT Group";
-		classification="IT";
-		chosenCA="2021-2025";
+		classification = "IT";
+		chosenCA = "2021-2025";
+
 		populateGroupSelect ("IT Group");
 		populateClassificationSelect("IT");
 		populateCASelect("2021-2025");
-		let rates = generateRates();
-		generateTables(rates)
+		generateTables(data.chosenCA);
 	} else {populateGroupSelect ();}
 
 
-	// Reset classification and CA selectors when group is changed. When CA is selected, display salary tables
-	groupSel.addEventListener("change", function () {
-		group = groupSel.value;
-		resetSelectors("groupSel");
-		populateClassificationSelect();
-	}, false);
+    setupEventListeners();  // Moved all event listener setup to a separate function
+} // End of main
 
-	classSel.addEventListener("change", function () {
-		classification = classSel.value;
-		resetSelectors("classSel");
-		populateCASelect();
-	}, false);
+function setupEventListeners() {
+    let groupSel = document.getElementById("groupSelect");
+    groupSel.addEventListener("change", function () {
+        group = groupSel.value;
+        resetSelectors("groupSel");
+        populateClassificationSelect();
+    }, false);
 
-	CASel.addEventListener("change", function () {
-		chosenCA = CASel.value;
-		resetSelectors("CASel");
-		populateLevelSelect();
-		let rates = generateRates();
-		generateTables(rates);
-		}, false);
+    let classSel = document.getElementById("classificationSelect");
+    classSel.addEventListener("change", function () {
+        classification = classSel.value;
+        resetSelectors("classSel");
+        populateCASelect();
+    }, false);
 
-	levelSel.addEventListener("change", function () {
-		level = levelSel.value
-		resetSelectors("levelSel");
-		populateStepSelect();
-		}, false);
+    let CASel = document.getElementById("CASelect");
+    CASel.addEventListener("change", function () {
+        chosenCA = CASel.value;
+        resetSelectors("CASel");
+        populateLevelSelect();
+        generateTables(data.chosenCA);
+    }, false);
 
-	stepSel.addEventListener("change", function () {
-		step = stepSel.value
-		resetSelectors("stepSel"); // Not strictly needed, but may as well keep the pattern going right?
-		}, false);
+    let levelSel = document.getElementById("levelSelect");
+    levelSel.addEventListener("change", function () {
+        level = levelSel.value;
+        resetSelectors("levelSel");
+        populateStepSelect();
+    }, false);
 
-} // End of init
+    let stepSel = document.getElementById("stepSelect");
+    stepSel.addEventListener("change", function () {
+        step = stepSel.value;
+        resetSelectors("stepSel");
+    }, false);
+} // End of setupEventListeners
 
 function oldinit () {
 	if (dbug) console.log ("Initting");
 	//saveValues = new Map();
 	var calcBtn = document.getElementById("calcBtn");
-	levelSel = document.getElementById("levelSelect");
+	let levelSel = document.getElementById("levelSelect");
 	//if (updateHash) levelSel.addEventListener("change", saveValue, false);
-	stepSel = document.getElementById("stepSel");
+	let stepSel = document.getElementById("stepSel");
 	//if (updateHash) stepSel.addEventListener("change", saveValue, false);
 	resultsDiv = document.getElementById("resultsDiv");
 	startDateTxt = document.getElementById("startDateTxt");
@@ -223,6 +269,7 @@ function oldinit () {
 
 function populateGroupSelect (bookmarkGroup = null) {
 	// This *should* only ever run once
+	let groupSel = document.getElementById("groupSelect");
 	for (const group in data) {
 		let attributes = { "parentNode": groupSel, "textNode": group, "value": group};
 		if (group === bookmarkGroup) { attributes["selected"] = true; } // Add something for the bookmarks
@@ -232,6 +279,7 @@ function populateGroupSelect (bookmarkGroup = null) {
 
 function populateClassificationSelect (bookmarkClassification = null) {
 	// When this function is invoked, clear out the dropdown and populate it with the new options.
+	let classSel = document.getElementById("classificationSelect");
 	classSel.length = 1;
 	for (const classifications in data[group]) {
 		let attributes = { "parentNode": classSel, "textNode": classifications};
@@ -241,13 +289,14 @@ function populateClassificationSelect (bookmarkClassification = null) {
 	// If there's exactly one classification, select it and skip to the CA selector
 	if ( Object.keys(data[group]).length === 1) {
 		classSel.selectedIndex = 1;
-		classification = classSel.value;
+		classification=classSel.value;
 		populateCASelect();
 	}
 } // End of populateClassificationSelect
 
 function populateCASelect(bookmarkCA = null) {
 	// Delete all options and create new options every time  this is invoked.
+	let CASel = document.getElementById("CASelect");
 	CASel.length = 1;
 	for (const CA in data[group][classification]) {
 		let attributes = { "parentNode": CASel, "textNode": CA};
@@ -257,10 +306,9 @@ function populateCASelect(bookmarkCA = null) {
 } // End of populateCASelect
 
 function populateLevelSelect(bookmarkLevel = null){
+	let levelSel = document.getElementById("levelSelect");
 	levelSel.length = 1;
-
-	let levels = data[group][classification][chosenCA].salaries.annual;
-    for (let i = 0; i < levels.length; i++) {
+    for (let i = 0; i < data.chosenCA.levels; i++) {
 		let attributes = {"parentNode": levelSel, "textNode": `${classification}-${i + 1}`, "value": i};
 		if (i === bookmarkLevel) { attributes["selected"] = true; }
 		createHTMLElement("option", attributes);
@@ -279,6 +327,12 @@ function populateStepSelect(bookmarkStep = null){
 
 // Only a convenience function for the group / level / etc selectors. Do not use elsewhere, won't work as expected!
 function resetSelectors(selector){
+	console.debug(`Resetting selectors on: ${selector}`)
+	const classSel = document.getElementById("classificationSelect");
+	const CASel = document.getElementById("CASelect");
+	const levelSel = document.getElementById("levelSelect");
+	const stepSel = document.getElementById("stepSelect");
+
 	switch (selector) {
 		case "groupSel" :
 			classSel.length = 1;
@@ -325,82 +379,84 @@ function getStr (str) {
 	return rv;
 } // End of getStr
 
-function generateRates(collectiveAgreement = null) {
-    // If the CA is provided via the parameter, use it, otherwise use data[]
-    const CA = collectiveAgreement || data[group][classification][chosenCA];
-    const salaries = CA.salaries.annual;
-    const levels = salaries.length;
+function generateAllRates() {
+	// Actual calculations start about 25-30 lines down
+	const calculateSalaryBreakdown = (annual) => ({
+		annual: annual,
+		weekly: annual / WeeksInYear,
+		daily: annual / WeeksInYear / 5,
+		hourly: annual / WeeksInYear / 5 / 7.5
+	});
 
-    let rates = {
-        levels: levels,
-        startDate: new Date(CA.TABegin),
-        endDate: new Date(CA.TAEnd),
-        payPeriods: {
-            current: { salary: [] }
-        }
-    };
+	// Since groups, classifications, and CA are objects and not arrays they can't be iterated over directly
+	for (const groupKey in data) {
+		for (const classificationKey in data[groupKey]) {
+			for (const CAKey in data[groupKey][classificationKey]) {
+				console.debug("Processing rates for:", groupKey, classificationKey, CAKey );
+				const CA = data[groupKey][classificationKey][CAKey];
+				let salaries = CA.salaries;
+				let levels = salaries.length;
+				CA.levels =  levels;
 
-    // Helper function to calculate salary breakdowns
-    const calculateSalaryBreakdown = (annual) => ({
-        annual: annual,
-        weekly: annual / WeeksInYear,
-        daily: annual / WeeksInYear / 5,
-        hourly: annual / WeeksInYear / 5 / 7.5
-    });
+				let rates = { current: {salary: []} };
 
-    // Create the starting array based on the unmodified salary dollars in the JSON file
-    for (let level = 0; level < levels; level++) {
-        let steps = [];
-        for (let step = 0; step < salaries[level].length; step++) {
-            steps.push(calculateSalaryBreakdown(salaries[level][step]));
-        }
-        rates.payPeriods.current.salary.push(steps);
-    }
+				// -- *Actually* calculate the rates starting here
+				// Create the starting array based on the unmodified salary dollars in the JSON file
+				for (let level = 0; level < levels; level++) {
+					let steps = [];
+					for (let step = 0; step < salaries[level].length; step++) {
+						steps.push(calculateSalaryBreakdown(salaries[level][step]));
+					}
+					rates.current.salary.push(steps);
+				}
 
-    // Deep copy of the current salary to avoid accidental modification
-    let previousSalary = JSON.parse(JSON.stringify(rates.payPeriods.current.salary));
-    let previousCompounded = Array(levels).fill(0);
+				// Deep copy of the current salary to avoid accidental modification
+				let previousSalary = JSON.parse(JSON.stringify(rates.current.salary));
+				let previousCompounded = Array(levels).fill(0);
 
-    // Sort pay periods by date
-    const payPeriods = CA.periods.filter(period => period.reason === "Contractual Increase")
-                                  .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+				const payPeriods = CA.periods.filter(period => period.type === "Contractual Increase")
+											  .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
 
-    for (let i = 0; i < payPeriods.length; i++) {
-        let period = payPeriods[i];
-        rates.payPeriods[period.startDate] = { salary: [] };
+				// Calculate each pay period by multiplying its increment against the previous period.
+				for (let i = 0; i < payPeriods.length; i++) {
+					let period = payPeriods[i];
+					rates[period.date] = { salary: [] };
 
-        if (period.increments.length === 1) {
-            period.increments = Array(levels).fill(period.increments[0]); // Apply the same increment to all levels
-        }
+					// If only one increment, apply it to all levels
+					if (period.increments.length === 1) {
+						period.increments = Array(levels).fill(period.increments[0]);
+					}
 
-        for (let level = 0; level < period.increments.length; level++) {
-            let incrementValue = Number(period.increments[level]);
-            let steps = [];
-            for (let step = 0; step < previousSalary[level].length; step++) {
-                let annual = previousSalary[level][step].annual * (1 + incrementValue / 100);
-                steps.push(calculateSalaryBreakdown(annual));
-            }
-            rates.payPeriods[period.startDate].salary.push(steps);
-        }
-        rates.payPeriods[period.startDate].increments = period.increments;
-        rates.payPeriods[period.startDate].compounded = previousCompounded.map(
-            (prev, idx) => parseFloat(((1 + prev / 100) * (1 + period.increments[idx] / 100) - 1) * 100).toFixed(6)
-        );
+					for (let level = 0; level < period.increments.length; level++) {
+						let incrementValue = Number(period.increments[level]);
+						let steps = [];
+						for (let step = 0; step < previousSalary[level].length; step++) {
+							let annual = previousSalary[level][step].annual * (1 + incrementValue / 100);
+							steps.push(calculateSalaryBreakdown(annual));
+						}
+						rates[period.date].salary.push(steps);
+					}
+					rates[period.date].increments = period.increments;
+					rates[period.date].compounded = previousCompounded.map((prev, idx) => ((1 + prev / 100) * (1 + period.increments[idx] / 100) - 1) * 100);
 
-        // Update previous values for the next iteration
-        previousSalary = JSON.parse(JSON.stringify(rates.payPeriods[period.startDate].salary));
-        previousCompounded = [...rates.payPeriods[period.startDate].compounded];
-    }
-
-    return rates;
-} // End of generateRates
+					// Update "previous" variables for the next iteration
+					previousSalary = JSON.parse(JSON.stringify(rates[period.date].salary));
+					previousCompounded = [...rates[period.date].compounded];
+				}
+				// Finally, after all calculations are done slap this bad boy into it's CA
+				CA.rates = rates;
+			}
+		}
+	}
+} // End of generateAllRates
 
 
-function generateTables(rates) {
+function generateTables(CA) {
     // TODO: handle options or parameters or whatnot
-    let payTablesSection = document.getElementById("payTablesSection");
-    let timeps = ["annual", "weekly", "daily", "hourly"];
-    let levels = rates.levels;
+	let levels = CA.levels;
+	let rates = CA.rates;
+	let timeps = ["annual", "weekly", "daily", "hourly"];
+	let payTablesSection = document.getElementById("payTablesSection");
 
     // Create tables for each level
     for (let level = 0; level < levels; level++) {
@@ -410,7 +466,7 @@ function generateTables(rates) {
         createHTMLElement("h3", { parentNode: newSummary, textNode: levelText });
 
         let yearSect = createHTMLElement("section", { parentNode: newSection, class: "yearSect" });
-        createHTMLElement("h4", { parentNode: yearSect, textNode: `${getStr("current")} (${rates.startDate.toISOString().slice(0, 10)})` });
+        createHTMLElement("h4", { parentNode: yearSect, textNode: `${getStr("current")} (${CA.startDate.slice(0, 10)})` });
         let respDiv = createHTMLElement("div", { parentNode: yearSect, class: "tables-responsive" });
 
         let newTable = createHTMLElement("table", { parentNode: respDiv, class: "table caption-top" });
@@ -419,7 +475,7 @@ function generateTables(rates) {
 
         // Create table headers for steps
         createHTMLElement("td", { parentNode: newTR, textNode: "" });
-        for (let step = 0; step < rates.payPeriods.current.salary[level].length; step++) {
+        for (let step = 0; step < rates["current"].salary[level].length; step++) {
             createHTMLElement("th", { parentNode: newTR, textNode: `${getStr("step")} ${step + 1}`, scope: "col" });
         }
 
@@ -428,17 +484,17 @@ function generateTables(rates) {
         timeps.forEach(t => {
             let row = createHTMLElement("tr", { parentNode: newTBody });
             createHTMLElement("th", { parentNode: row, textNode: getStr(t), scope: "row" });
-            for (let step = 0; step < rates.payPeriods.current.salary[level].length; step++) {
-                createHTMLElement("td", { parentNode: row, textNode: getNum(rates.payPeriods.current.salary[level][step][t]) });
+            for (let step = 0; step < rates["current"].salary[level].length; step++) {
+                createHTMLElement("td", { parentNode: row, textNode: getNum(rates["current"].salary[level][step][t]) });
             }
         });
 
         // Iterate over pay periods in the payPeriods object, skipping 'current'
 		// TODO: Add a row for
-        for (let period in rates.payPeriods) {
+        for (let period in rates) {
             if (period === "current") continue;
 
-            let payPeriod = rates.payPeriods[period];
+            let payPeriod = rates[period];
 
             let newYearSect = createHTMLElement("section", { parentNode: newSection, class: "yearSect" });
             createHTMLElement("h4", { parentNode: newYearSect, textNode: period });
@@ -462,10 +518,17 @@ function generateTables(rates) {
                 }
             });
 
-
+			// TODO: Add inflation / CPI stuff to the info section here
+			let infoSect = createHTMLElement("section", {"parentNode" : newYearSect/*, "insertBefore" : respDiv*/});
+			createHTMLElement("h5", {"parentNode" : infoSect, "textNode" : getStr("info")});
+			let infoDL = createHTMLElement("dl", {"parentNode" : infoSect});
+			createHTMLElement("dt", {"parentNode":infoDL, "textNode" : getStr("payrateIncr")});
+			createHTMLElement("dd", {"parentNode":infoDL, "textNode" : payPeriod.increments[level]+ " %"});
+			createHTMLElement("dt", {"parentNode":infoDL, "textNode" : getStr("payrateTotalIncr")});
+			createHTMLElement("dd", {"parentNode":infoDL, "textNode" : payPeriod.compounded[level] + " %"});
         }
     }
-    console.debug("breakpoint here");
+	console.info("Generated tables for:", CA);
 } // End of generateTables
 
 function getNum(num) {
@@ -542,7 +605,7 @@ function handleHash () {
 	
 	// Promotions
 	let looking = true;
-	for (i = 0; i<5 && looking; i++) {
+	for (let i = 0; i<5 && looking; i++) {
 		if (params.has("pdate" + i) && params.has("plvl"+i)) {
 			addPromotionHandler(null, {"date" : params.get("pdate" + i), "level" : params.get("plvl" + i), "toFocus" : false});
 			hasHash = true;
@@ -1155,106 +1218,89 @@ function getLumpSums () {
 		}
 	}
 } // End of getLumpSums
-	
-/*
-Defunct:
 
-function handlePromotions () {
-	//var lvl = parseInt(document.getElementById("levelSelect").value.replace(/\D/, ""));
-	var promotionsDiv = document.getElementById("promotionsDiv");
-	var numOfPromotions = numPromotions.value;
-	for (var i = 0; i < 4; i++) {
-		var newPromotionDiv = null;
-		newPromotionDiv = document.getElementById("promo" + i);
-		if (newPromotionDiv) {
-			// It's there.  
-			if (i>=numOfPromotions) {
-				promotionsDiv.removeChild(newPromotionDiv);
+const addPromotionHandler = (function () {
+	// Descoped this from global to local variable
+	let promotions = 0;
+	const levelSel = document.getElementById("levelSelect");
+
+	return function addPromotionHandler(e, o) {
+		let toFocus = true;
+		let pdate = null;
+		let plvl = null;
+		if (arguments.length > 1) {
+			let args = arguments[1];
+			if (dbug) console.log("addPromotionHandler::arguments: " + arguments.length);
+			if (args.hasOwnProperty("toFocus")) toFocus = args["toFocus"];
+			if (args.hasOwnProperty("date")) {
+				pdate = (isValidDate(args["date"]) ? args["date"] : null);
 			}
-		} else {
-			// It's not there.
-			if (i < numOfPromotions) {
-				newPromotionDiv = createHTMLElement("div", {"parentNode":promotionsDiv, "class":"fieldHolder promotions", "id":"promo"+i});
-				var newPromoLbl = createHTMLElement("label", {"parentNode":newPromotionDiv, "for":"promoDate" + i, "nodeText":"Date of promotion: "});
-				var newPromoDate = createHTMLElement("input", {"parentNode":newPromotionDiv, "type":"date", "id":"promoDate" + i, "aria-describedby":"dateFormat"});
-	
-				var newLevelLbl = createHTMLElement("label", {"parentNode":newPromotionDiv, "for":"promoLevel" + i, "nodeText":"Level promotion: "});
-				var newPromoSel = createHTMLElement("select", {"parentNode":newPromotionDiv, "id":"promoLevel" + i});
-				for (var j = 0; j < 6; j++) {
-					var newPromoOpt = createHTMLElement("option", {"parentNode":newPromoSel, "value": j, "nodeText":(j == 0 ? "Select Level" : "CS-0" + j)});
-				}
+			if (args.hasOwnProperty("level")) {
+				plvl = args["level"].replaceAll(/\D/g, "");
+				plvl = (plvl > 0 && plvl < 6 ? plvl : null);
+			}
+			if (dbug) console.log(`addPromotionHandler::toFocus: ${toFocus}, pdate: ${pdate}, plvl: ${plvl}.`);
+		}
+		let promotionsDiv = document.getElementById("promotionsDiv");
+
+		// Find the next available promotion ID by extracting the highest current ID and incrementing it.
+		let existingPromotions = promotionsDiv.querySelectorAll("[id^='promotion']");
+		let maxId = Array.from(existingPromotions)
+			.map(el => parseInt(el.id.replace('promotion', ''), 10))
+			.reduce((max, current) => Math.max(max, current), -1);
+		let id = maxId + 1;
+
+		let newPromotionFS = createHTMLElement("fieldset", { "parentNode": promotionsDiv, "class": "fieldHolder promotions", "id": "promo" + id});
+		createHTMLElement("legend", { "parentNode": newPromotionFS, "textNode": "Promotion " + (id + 1) });
+		createHTMLElement("label", { "parentNode": newPromotionFS, "for": "promoDate" + id, "nodeText": "Date of promotion: "});
+		let newPromoDate = createHTMLElement("input", { "parentNode": newPromotionFS, "type": "date", "id": "promoDate" + id, "aria-describedby": "dateFormat","value": (pdate ? pdate : null) });
+		if (toFocus) newPromoDate.focus();
+
+		createHTMLElement("label", { "parentNode": newPromotionFS, "for": "promotionLevel" + id, "nodeText": "Promoted to level: " });
+		let newPromotionSel = createHTMLElement("select", {"parentNode": newPromotionFS, "id": "promotionLevel" + id});
+		// TODO:
+		chosenCA.salaries.annual.length;
+		for (let j = 0; j < 6; j++) {
+			let newPromoOpt = createHTMLElement("option", {
+				"parentNode": newPromotionSel,
+				"value": j,
+				"nodeText": (j === 0 ? "Select Level" : "CS-0" + j)
+			});
+			if (plvl) {
+				if (plvl == j) newPromoOpt.setAttribute("selected", "selected");
+			} else {
+				if (parseInt(levelSel.value) + 1 == j) newPromoOpt.setAttribute("selected", "selected");
 			}
 		}
-	}
-	resultStatus.innerHTML="New promotions section added.";
-} // End of handlePromotions
-*/
 
-function addPromotionHandler (e, o) {
-	let toFocus = true;
-	let pdate = null;
-	let plvl = null;
-	if (arguments.length > 1) {
-		let args = arguments[1];
-		if (dbug) console.log ("addPromotionHandler::arguments: " + arguments.length);
-		if (args.hasOwnProperty("toFocus")) toFocus = args["toFocus"];
-		if (args.hasOwnProperty("date")) {
-			pdate = (isValidDate(args["date"]) ? args["date"] : null);
-		}
-		if (args.hasOwnProperty("level")) {
-			plvl = args["level"].replaceAll(/\D/g, "");
-			plvl = (plvl >0 && plvl <6 ? plvl : null);
-		}
-		if (dbug) console.log (`addPromotionHandler::toFocus: ${toFocus}, pdate: ${pdate}, plvl: ${plvl}.`);
-	}
-	let promotionsDiv = document.getElementById("promotionsDiv");
-	let id = promotions;
-	let looking = true;
-	while (looking) {
-		if (document.getElementById("promotion" + id)) {
-			id++;
+		let promoButtonsDiv = null;
+		if (id == 0) {
+			promoButtonsDiv = createHTMLElement("div", {"parentNode": newPromotionFS, "id": "promoButtonsDiv"});
+			var newDelPromotionBtn = createHTMLElement("input", {
+				"parentNode": promoButtonsDiv,
+				"type": "button",
+				"value": "Remove",
+				"id": "removePromotionBtn" + promotions
+			});
+			var newAddPromotionBtn = createHTMLElement("input", {
+				"parentNode": promoButtonsDiv,
+				"type": "button",
+				"value": "Add another promotion",
+				"class": "promotionsBtn",
+				"id": "addPromotionsBtn" + id
+			});
+			newAddPromotionBtn.addEventListener("click", addPromotionHandler, false);
+			newDelPromotionBtn.addEventListener("click", removePromotionDiv, false);
 		} else {
-			looking = false;
+			promoButtonsDiv = document.getElementById("promoButtonsDiv");
+			newPromotionFS.appendChild(promoButtonsDiv);
 		}
+
+		promotions++;
+
+		resultStatus.innerHTML = "New Acting section added.";
 	}
-
-	let newPromotionFS = createHTMLElement("fieldset", {"parentNode":promotionsDiv, "class":"fieldHolder promotions", "id" :"promo" + id});
-	let newPromotionLegend = createHTMLElement("legend", {"parentNode":newPromotionFS, "textNode":"Promotion " + (id+1)});
-
-	var newPromoLbl = createHTMLElement("label", {"parentNode":newPromotionFS, "for":"promoDate" + id, "nodeText":"Date of promotion: "});
-	var newPromoDate = createHTMLElement("input", {"parentNode":newPromotionFS, "type":"date", "id":"promoDate" + id, "aria-describedby":"dateFormat", "value":(pdate ? pdate : null)});
-	if (toFocus) newPromoDate.focus();
-	//newPromoDate.addEventListener("change", saveValue, false);
-
-	let newLevelLbl = createHTMLElement("label", {"parentNode":newPromotionFS, "for":"promotionLevel" + id, "nodeText":"Promoted to level: "});
-	var newPromotionSel = createHTMLElement("select", {"parentNode":newPromotionFS, "id":"promotionLevel" + id});
-	for (var j = 0; j < 6; j++) {
-		var newPromoOpt = createHTMLElement("option", {"parentNode":newPromotionSel, "value": j, "nodeText":(j == 0 ? "Select Level" : "CS-0" + j)});
-		if (plvl) {
-			if (plvl == j) newPromoOpt.setAttribute("selected", "selected");
-		} else {
-			if (parseInt(levelSel.value)+1 == j) newPromoOpt.setAttribute("selected", "selected");
-		}
-	}
-	//newPromotionSel.addEventListener("change", saveValue, false);
-
-	let promoButtonsDiv = null;
-	if (id == 0) {
-		promoButtonsDiv = createHTMLElement("div", {"parentNode":newPromotionFS, "id":"promoButtonsDiv"});
-		var newDelPromotionBtn = createHTMLElement("input", {"parentNode":promoButtonsDiv, "type":"button", "value":"Remove", "id": "removePromotionBtn" + promotions});
-		var newAddPromotionBtn = createHTMLElement("input", {"parentNode":promoButtonsDiv, "type":"button", "value":"Add another promotion", "class":"promotionsBtn", "id": "addPromotionsBtn" + id});
-		newAddPromotionBtn.addEventListener("click", addPromotionHandler, false);
-		newDelPromotionBtn.addEventListener("click", removePromotionDiv, false);
-	} else {
-		promoButtonsDiv = document.getElementById("promoButtonsDiv");
-		newPromotionFS.appendChild(promoButtonsDiv);
-	}
-
-	promotions++;
-
-
-	resultStatus.innerHTML="New Acting section added.";
-} // End of addPromotionHandler
+});// End of addPromotionHandler
 
 function addActingHandler () {
 	let toFocus = true;
@@ -2043,8 +2089,10 @@ var formatter = new Intl.NumberFormat('en-CA', {
 
 
 function createHTMLElement (type, attribs) {
-	var newEl = document.createElement(type);
-	mainForm.appendChild(newEl);
+	let newEl = document.createElement(type);
+	//This used to use a var mainForm, but I localized it to just access the element directly
+	document.getElementById("mainForm").appendChild(newEl);
+
 	var dbug = (arguments.length == 3 &&arguments[2] != null && arguments[2] != false ? true : false);
 	for (var k in attribs) {
 		if (dbug) console.log("Dealing with attrib " + k + ".");
@@ -2106,34 +2154,6 @@ function isReady () {
 	}
 } // End of isReader
 
-async function getData () {
-	let response = await fetch("raiseInfo.json");
-	if (response.ok) { // if HTTP-status is 200-299
-		// get the response body (the method explained below)
-		data = await response.json();
-		// if (dbug) console.log ("Got json: "  + JSON.stringify(data) + ".");
-		//salaries = json["IT"]["2018-2021"]["salaries"]["annual"];
-		//daily = json["IT"]["2018-2021"]["salaries"]["daily"];
-		//hourly = json["IT"]["2018-2021"]["salaries"]["hourly"];
-		//initPeriods = json["IT"]["2018-2021"]["periods"];
-		console.log ("getData::calling isReady");
-		//isReady();
-	} else {
-		console.error ("HTTP-Error: " + response.status);
-	}
-	response = await fetch("i18n.json");
-	if (response.ok) { // if HTTP-status is 200-299
-		i18n = await response.json();
-		if (dbug) console.log ("Got json: "  + JSON.stringify(i18n) + ".");
-		console.log ("getI18n::calling isReady");
-		//isReady();
-	} else {
-		console.error ("HTTP-Error: " + response.status);
-	}
-	if (dbug) console.log ("getData::calling init.");
-	init();
-} // End of getData
 
 if (dbug) console.log ("Finished loading backpayCalc.js.");
-document.addEventListener('DOMContentLoaded', getData, false);
-
+main();
