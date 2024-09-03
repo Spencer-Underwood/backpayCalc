@@ -1127,484 +1127,6 @@ function getLumpSums () {
 	}
 } // End of getLumpSums
 
-function addPromotionHandler() {
-	let toFocus = true;
-	let pdate = null;
-	let plvl = null;
-	if (arguments.length > 1) {
-		let args = arguments[1];
-		if (dbug) console.log("addPromotionHandler::arguments: " + arguments.length);
-		if (args.hasOwnProperty("toFocus")) toFocus = args["toFocus"];
-		if (args.hasOwnProperty("date")) {
-			pdate = (isValidDate(args["date"]) ? args["date"] : null);
-		}
-		if (args.hasOwnProperty("level")) {
-			plvl = args["level"].replaceAll(/\D/g, "");
-			plvl = (plvl > 0 && plvl < 6 ? plvl : null);
-		}
-		if (dbug) console.log(`addPromotionHandler::toFocus: ${toFocus}, pdate: ${pdate}, plvl: ${plvl}.`);
-	}
-	let promotionsDiv = document.getElementById("promotionsDiv");
-
-	// Find the next available promotion ID by extracting the highest current ID and incrementing it.
-
-	let id = 0;
-	while (document.getElementById("promo" + id)) { id++; }
-
-	let newPromotionFS = createHTMLElement("fieldset", { "parentNode": promotionsDiv, "class": "fieldHolder promotions", "id": "promo" + id});
-	createHTMLElement("legend", {"parentNode": newPromotionFS, "textNode": "Promotion " + (id + 1)});
-	createHTMLElement("label", { "parentNode": newPromotionFS, "for": "promoDate" + id, "nodeText": "Date of promotion: " });
-	let newPromoDate = createHTMLElement("input", { "parentNode": newPromotionFS, "type": "date", "id": "promoDate" + id, "aria-describedby": "dateFormat", "value": (pdate ? pdate : null) });
-	if (toFocus) newPromoDate.focus();
-
-	createHTMLElement("label", { "parentNode": newPromotionFS, "for": "promotionLevel" + id, "nodeText": "Promoted to level: " });
-	let newPromotionSel = createHTMLElement("select", {"parentNode": newPromotionFS, "id": "promotionLevel" + id});
-
-	// TODO: Add bookmarking options somewhere around here
-
-	for (let j = 0; j < data.chosenCA().levels; j++) {
-		let newPromoOpt = createHTMLElement("option", { "parentNode": newPromotionSel, "value": j, "nodeText": (classification +"-" + (j +1))});
-		if (plvl) { if (plvl === j) newPromoOpt.setAttribute("selected", "selected"); }
-		else {
-			if (level + 1 === j) newPromoOpt.setAttribute("selected", "selected");
-		}
-	}
-
-	let promoButtonsDiv = null;
-	if (id === 0) {
-		promoButtonsDiv = createHTMLElement("div", {"parentNode": newPromotionFS, "id": "promoButtonsDiv"});
-		let newDelPromotionBtn = createHTMLElement("input", {
-			"parentNode": promoButtonsDiv,
-			"type": "button",
-			"value": "Remove",
-			"id": "removePromotionBtn" + id
-		});
-		let newAddPromotionBtn = createHTMLElement("input", {
-			"parentNode": promoButtonsDiv,
-			"type": "button",
-			"value": getStr("addAnotherPromotion"),
-			"class": "promotionsBtn",
-			"id": "addPromotionsBtn" + id
-		});
-		newAddPromotionBtn.addEventListener("click", addPromotionHandler, false);
-		newDelPromotionBtn.addEventListener("click", removePromotionDiv, false);
-	} else {
-		promoButtonsDiv = document.getElementById("promoButtonsDiv");
-		newPromotionFS.appendChild(promoButtonsDiv);
-	}
-
-	resultStatus.innerHTML = "New Acting section added.";
-} // End of addPromotionHandler
-
-function addActingHandler () {
-	let toFocus = true;
-	let afdate = null;
-	let atdate = null;
-	let alvl = null;
-	if (arguments.length > 1) {
-		let args = arguments[1];
-		if (dbug) console.log ("addActingHandler::arguments: " + arguments.length);
-		if (args.hasOwnProperty("toFocus")) toFocus = args["toFocus"];
-		if (args.hasOwnProperty("from")) {
-			afdate = (isValidDate(args["from"]) ? args["from"] : null);
-		}
-		if (args.hasOwnProperty("to")) {
-			atdate = (isValidDate(args["to"]) ? args["to"] : null);
-		}
-		if (args.hasOwnProperty("level")) {
-			alvl = args["level"].replaceAll(/\D/g, "");
-			alvl = (alvl >0 && alvl <6 ? alvl : null);
-		}
-		if (dbug) console.log (`addActingHandler::toFocus: ${toFocus}, from: ${afdate} to ${atdate}, alvl: ${alvl}.`);
-	}
-
-	let actingsDiv = document.getElementById("actingsDiv");
-
-	let id = 0;
-	while (document.getElementById("actingLevel"+id) ) { id++; }
-
-	let newActingFS = createHTMLElement("fieldset", {"parentNode":actingsDiv, "class":"fieldHolder actingStints", "id":"acting"+id});
-	createHTMLElement("legend", {"parentNode":newActingFS, "textNode":"Acting Stint " + (id+1)});
-
-	createHTMLElement("label", {"parentNode":newActingFS, "textNode":"From", "for":"actingFrom" + id});
-	let newActingFromDate = createHTMLElement("input", {"parentNode":newActingFS, "id":"actingFrom"+id, "type":"date", "aria-describedby":"dateFormat", "value":(afdate ? afdate : null)});
-	createHTMLElement("label", {"parentNode":newActingFS, "textNode":"To", "for":"actingTo"+id});
-	createHTMLElement("input", {"parentNode":newActingFS, "id":"actingTo"+id, "type":"date", "aria-describedby":"dateFormat", "value":(atdate ? atdate : null)});
-
-	createHTMLElement("label", {"parentNode":newActingFS, "for":"actingLevel" + id, "nodeText":"Acting Level: "});
-	let newActingSel = createHTMLElement("select", {"parentNode":newActingFS, "id":"actingLevel" + id});
-
-	for (let j = 0; j < data.chosenCA().levels+1; j++) {
-		let newPromoOpt = createHTMLElement("option", {"parentNode":newActingSel, "value": j, "nodeText":(j === 0 ? "Select Level" : classification + " - " + j)});
-		if (alvl) {
-			if (alvl === j) newPromoOpt.setAttribute("selected", "selected");
-		} else {
-			if (level+1 === j) newPromoOpt.setAttribute("selected", "selected");
-		}
-	}
-
-	let actingButtonsDiv = null;
-	if (id === 0) {
-		actingButtonsDiv = createHTMLElement("div", {"parentNode":newActingFS, "id":"actingButtonsDiv"});
-		var newDelActingBtn = createHTMLElement("input", {"parentNode":actingButtonsDiv, "type":"button", "value":"Remove", "id": "removeActingBtn" + actings});
-		var newAddActingBtn = createHTMLElement("input", {"parentNode":actingButtonsDiv, "type":"button", "value":"Add another Acting", "class":"actingBtn", "id": "addActingsBtn" + id});
-		newAddActingBtn.addEventListener("click", addActingHandler, false);
-		newDelActingBtn.addEventListener("click", removeActingDiv, false);
-	} else {
-		actingButtonsDiv = document.getElementById("actingButtonsDiv");
-		newActingFS.appendChild(actingButtonsDiv);
-	}
-
-	if (toFocus) newActingFromDate.focus();
-
-	resultStatus.innerHTML="New Acting section added.";
-} // End of addActingHandler
-
-function addLWoPHandler () {
-	let toFocus = true;
-	let lfrom = null;
-	let lto = null;
-	if (arguments.length > 1) {
-		let args = arguments[1];
-		if (dbug) console.log ("addLWoPHandler::arguments: " + arguments.length);
-		if (args.hasOwnProperty("toFocus")) toFocus = args["toFocus"];
-		if (args.hasOwnProperty("from")) {
-			lfrom = (isValidDate(args["from"]) ? args["from"] : null);
-		}
-		if (args.hasOwnProperty("to")) {
-			lto = (isValidDate(args["to"]) ? args["to"] : null);
-		}
-		if (dbug) console.log (`addLWoPHandler::toFocus: ${toFocus}, from: ${lfrom} to ${lto}.`);
-	}
-
-	var LWoPDiv = document.getElementById("LWoPDiv");
-
-	var id = lwops;
-	var looking = true;
-	while (looking) {
-		if (document.getElementById("lwopFrom" + id)) {
-			id++;
-		} else {
-			looking = false;
-		}
-	}
-
-	var newLWoPFS = createHTMLElement("fieldset", {"parentNode":LWoPDiv, "class":"fieldHolder lwopStints", "id":"lwop"+id});
-	var newLWoPLegend = createHTMLElement("legend", {"parentNode":newLWoPFS, "textNode":"LWoP Stint " + (id+1)});
-
-	var newLWoPFromLbl = createHTMLElement("label", {"parentNode":newLWoPFS, "textNode":"From", "for":"lwopFrom" + id});
-	var newLWoPFromDate = createHTMLElement("input", {"parentNode":newLWoPFS, "id":"lwopFrom"+id, "type":"date", "aria-describedby":"dateFormat", "value":(lfrom ? lfrom : null)});
-	var newLWoPToLbl = createHTMLElement("label", {"parentNode":newLWoPFS, "textNode":"To", "for":"lwopTo"+id});
-	var newLWoPToDate = createHTMLElement("input", {"parentNode":newLWoPFS, "id":"lwopTo"+id, "type":"date", "aria-describedby":"dateFormat", "value" : (lto ? lto : null)});
-
-	let lwopButtonsDiv = null;
-	if (id == 0) {
-		lwopButtonsDiv = createHTMLElement("div", {"parentNode":newLWoPFS, "id":"lwopButtonsDiv"});
-		var newDelLWoPBtn = createHTMLElement("input", {"parentNode":lwopButtonsDiv, "type":"button", "value":"Remove", "id": "removeLWoPBtn" + lwops});
-		var newAddLWoPBtn = createHTMLElement("input", {"parentNode":lwopButtonsDiv, "type":"button", "value":"Add another LWoP", "class":"lwopBtn", "id": "addLWoPsBtn" + id});
-		newAddLWoPBtn.addEventListener("click", addLWoPHandler, false);
-		newDelLWoPBtn.addEventListener("click", removeLWoPDiv, false);
-	} else {
-		lwopButtonsDiv = document.getElementById("lwopButtonsDiv");
-		newLWoPFS.appendChild(lwopButtonsDiv);
-	}
-
-	
-	lwops++;
-	if (toFocus) newLWoPFromDate.focus();
-	resultStatus.innerHTML="New leave without pay section added.";
-} // End of lWoPHandler
-
-function addOvertimeHandler () {
-	let toFocus = true;
-	let otdate = null;
-	let othours = null;
-	let otrate = null;
-	if (arguments.length > 1) {
-		let args = arguments[1];
-		if (dbug) console.log ("addOvertimeHandler::arguments: " + arguments.length);
-		if (args.hasOwnProperty("toFocus")) toFocus = args["toFocus"];
-		if (args.hasOwnProperty("date")) {
-			otdate = (isValidDate(args["date"]) ? args["date"] : null);
-		}
-		if (args.hasOwnProperty("hours")) {
-			othours = (args["hours"] ? args["hours"] : null);
-		}
-		if (args.hasOwnProperty("rate")) {
-			otrate = (["rate"] ? args["rate"] : null);
-		}
-		if (dbug) console.log (`addOvertimeHandler::toFocus: ${toFocus}, date: ${otdate} hours ${othours}, rate: ${otrate}.`);
-	}
-
-	var OvertimeDiv = document.getElementById("overtimeDiv");
-
-	var id = overtimes;
-	var looking = true;
-	while (looking) {
-		if (document.getElementById("overtimeDate" + id)) {
-			id++;
-		} else {
-			looking = false;
-		}
-	}
-	var newOvertimeFS = createHTMLElement("fieldset", {"parentNode":OvertimeDiv, "class":"fieldHolder overtimes", "id":"ot" + id});
-	var newOvertimeLegend = createHTMLElement("legend", {"parentNode":newOvertimeFS, "textNode":"Overtime or Standby " + (id+1)});
-
-	var newDateFieldHolder = createHTMLElement("div", {"parentNode":newOvertimeFS, "class":"fieldHolder"});
-	var newOvertimeDateLbl = createHTMLElement("label", {"parentNode":newDateFieldHolder, "textNode":"Date of Overtime:", "for":"overtimeDate" + id});
-	var newOvertimeDate = createHTMLElement("input", {"parentNode":newDateFieldHolder, "id":"overtimeDate"+id, "type":"date", "aria-describedby":"dateFormat", "value":(otdate ? otdate : null)});
-
-
-	var newAmountFieldHolder = createHTMLElement("div", {"parentNode":newOvertimeFS, "class":"fieldHolder"});
-	var newOvertimeAmountLbl = createHTMLElement("label", {"parentNode":newAmountFieldHolder, "textNode":"Hours-worth of overtime", "for":"overtimeAmount" + id});
-	var newOvertimeAmount = createHTMLElement("input", {"parentNode":newAmountFieldHolder, "id":"overtimeAmount"+id, "type":"text", "value" : (othours ? othours : null)});
-
-	var newRateFieldHolder = createHTMLElement("div", {"parentNode":newOvertimeFS, "class":"fieldHolder"});
-	var newOvertimeRateLbl = createHTMLElement("label", {"parentNode":newAmountFieldHolder, "textNode":"Overtime Rate:", "for":"overtimeRate" + id});
-	var newOvertimeRate = createHTMLElement("select", {"parentNode":newAmountFieldHolder, "id":"overtimeRate"+id});
-	let rates = {"0" : "Select Overtime Rate", "0.125" : "1/8x - Standby", "1.0" : "1.0", "1.5" : "1.5", "2.0": "2.0"};
-	createHTMLElement("option", {"parentNode":newOvertimeRate, "value":"0", "nodeText":"Select Overtime Rate"});
-	
-	for (let r in rates) {
-		let rt = createHTMLElement("option", {"parentNode":newOvertimeRate, "value":r, "nodeText": rates[r]});
-		if (otrate && otrate == r) rt.setAttribute("selected", "selected");
-	}
-
-
-	let otButtonsDiv = null;
-	if (id == 0) {
-		otButtonsDiv = createHTMLElement("div", {"parentNode":newOvertimeFS, "id":"otButtonsDiv"});
-		var newDelOvertimeBtn = createHTMLElement("input", {"parentNode":otButtonsDiv, "type":"button", "value":"Remove", "id": "removeOvertimeBtn" + overtimes});
-		var newAddOvertimeBtn = createHTMLElement("input", {"parentNode":otButtonsDiv, "type":"button", "value":"Add another Overtime", "class":"otBtn", "id": "addOvertimesBtn" + id});
-		newAddOvertimeBtn.addEventListener("click", addOvertimeHandler, false);
-		newDelOvertimeBtn.addEventListener("click", removeOvertimeDiv, false);
-	} else {
-		otButtonsDiv = document.getElementById("otButtonsDiv");
-		newOvertimeFS.appendChild(otButtonsDiv);
-	}
-	if (toFocus) newOvertimeDate.focus();
-	overtimes++;
-
-	resultStatus.innerHTML="New overtime section added.";
-} // End of addOvertimeHandler
-
-function addLumpSumHandler () {
-	let toFocus = true;
-	let lsdate = null;
-	let lshours = null;
-	if (arguments.length > 1) {
-		let args = arguments[1];
-		if (dbug) console.log ("addLumpSumHandler::arguments: " + arguments.length);
-		if (args.hasOwnProperty("toFocus")) toFocus = args["toFocus"];
-		if (args.hasOwnProperty("date")) {
-			lsdate = (isValidDate(args["date"]) ? args["date"] : null);
-		}
-		if (args.hasOwnProperty("hours")) {
-			lshours = (args["hours"] ? args["hours"] : null);
-		}
-		if (dbug) console.log (`addLumpSumHandler::toFocus: ${toFocus}, date: ${lsdate} hours ${lshours}.`);
-	}
-
-	var LumpSumDiv = document.getElementById("lumpSumDiv");
-
-	var id = lumpSums;
-	var looking = true;
-	while (looking) {
-		if (document.getElementById("lumpSumDate" + id)) {
-			id++;
-		} else {
-			looking = false;
-		}
-	}
-	var newLumpSumFS = createHTMLElement("fieldset", {"parentNode":LumpSumDiv, "class":"fieldHolder lumpSums", "id":"lumpSum" + id});
-	var newLumpSumLegend = createHTMLElement("legend", {"parentNode":newLumpSumFS, "textNode":"Lump Sum " + (id+1)});
-
-	var newDateFieldHolder = createHTMLElement("div", {"parentNode":newLumpSumFS, "class":"fieldHolder"});
-	var newLumpSumDateLbl = createHTMLElement("label", {"parentNode":newDateFieldHolder, "textNode":"Date paid out:", "for":"lumpSumDate" + id});
-	var newLumpSumDate = createHTMLElement("input", {"parentNode":newDateFieldHolder, "id":"lumpSumDate"+id, "type":"date", "aria-describedby":"dateFormat", "value" : (lsdate ? lsdate : null)});
-
-	var newAmountFieldHolder = createHTMLElement("div", {"parentNode":newLumpSumFS, "class":"fieldHolder"});
-	var newLumpSumAmountLbl = createHTMLElement("label", {"parentNode":newAmountFieldHolder, "textNode":"Hours-worth of payout", "for":"lumpSumAmount" + id});
-	var newLumpSumAmount = createHTMLElement("input", {"parentNode":newAmountFieldHolder, "id":"lumpSumAmount"+id, "type":"text", "value" : (lshours ? lshours : "")});
-
-
-	let lumpSumButtonsDiv = null;
-	if (id == 0) {
-		lumpSumButtonsDiv = createHTMLElement("div", {"parentNode":newLumpSumFS, "id":"lumpSumButtonsDiv"});
-		var newDelLumpSumBtn = createHTMLElement("input", {"parentNode":lumpSumButtonsDiv, "type":"button", "value":"Remove", "id": "removeLumpSumBtn" + lumpSums});
-		var newAddLumpSumBtn = createHTMLElement("input", {"parentNode":lumpSumButtonsDiv, "type":"button", "value":"Add another LumpSum", "class":"lumpSumBtn", "id": "addLumpSumsBtn" + id});
-		newAddLumpSumBtn.addEventListener("click", addLumpSumHandler, false);
-		newDelLumpSumBtn.addEventListener("click", removeLumpSumDiv, false);
-	} else {
-		lumpSumButtonsDiv = document.getElementById("lumpSumButtonsDiv");
-		newLumpSumFS.appendChild(lumpSumButtonsDiv);
-	}
-
-	if (toFocus) newLumpSumDate.focus();
-
-
-	/*
-	var newDelLumpSumBtn = createHTMLElement("input", {"parentNode":newLumpSumFS, "type":"button", "value":"Remove", "id": "removeLumpSumBtn" + id});
-	var newAddLumpSumBtn = createHTMLElement("input", {"parentNode":newLumpSumFS, "type":"button", "value":"Add another Lump Sum period", "class":"lumpsumBtn", "id":"addLumpSumsBtn" + id});
-	newAddLumpSumBtn.addEventListener("click", addLumpSumHandler, false);
-	newDelLumpSumBtn.addEventListener("click", removeLumpSumDiv, false);
-	*/
-	lumpSums++;
-	resultStatus.innerHTML="New lump sum section added.";
-} // End of addLumpSum Handler
-
-function removePromotionDiv (e) {
-	let promoButtonsDiv = document.getElementById("promoButtonsDiv");
-	let promoFS = null;
-	let promoDate = null;
-
-	let promoText = e.target.closest(".promotions").id;
-	let promotions = Number(promoText.replace("promo",""));
-	let rmPromoFS = document.getElementById("promo" + promotions);
-	if (promotions === 0) {
-		addPromotionBtn.focus();
-	} else {
-		promoFS = document.getElementById("promo" + (promotions-1));
-		if (promoFS) promoFS.appendChild(promoButtonsDiv);
-		promoDate = document.getElementById("promoDate" + (promotions-1));
-		if (promoDate) promoDate.focus();
-	}
-
-	rmPromoFS.parentNode.removeChild(rmPromoFS);
-	rmPromoFS = null;
-
-	resultStatus.innerHTML="Promotion section removed.";
-} // End of removePromotionDiv
-
-function removeActingDiv (e) {
-	let actingFS = null;
-	let actingFromDate = null;
-	let actingButtonsDiv =  document.getElementById("actingButtonsDiv");
-
-	let actingText = e.target.closest(".actingStints").id;
-	let actings = Number(actingText.replace("acting",""));
-	let rmActingFS = document.getElementById("acting" + actings);
-
-	if (actings === 0) {
-		addActingBtn.focus();
-	} else {
-		actingFS = document.getElementById("acting" + (actings-1));
-		if (actingFS) actingFS.appendChild(actingButtonsDiv);
-		actingFromDate = document.getElementById("actingFromDate" + (actings-1));
-		if (actingFromDate) actingFromDate.focus();
-	}
-
-	rmActingFS.parentNode.removeChild(rmActingFS);
-	rmActingFS = null;
-
-	resultStatus.innerHTML="Acting section removed.";
-} // End of removeActingDiv
-
-function removeLWoPDiv (e) {
-	let lwopButtonsDiv = null;
-	let lwopFS = null;
-	let lwopDate = null;
-	let rmLwopFS = null;
-	
-	lwopButtonsDiv = document.getElementById("lwopButtonsDiv");
-
-	lwops--;
-	rmLwopFS = document.getElementById("lwop" + lwops);
-	if (lwops == 0) {
-		addLwopBtn.focus();
-	} else {
-		lwopFS = document.getElementById("lwop" + (lwops-1));
-		if (lwopFS) lwopFS.appendChild(lwopButtonsDiv);
-		lwopDate = document.getElementById("lwopFrom" + (lwops-1));
-		if (lwopDate) lwopDate.focus();
-	}
-
-	rmLwopFS.parentNode.removeChild(rmLwopFS);
-	rmLwopFS = null;
-	resultStatus.innerHTML="Leave Without Pay section removed.";
-} // End of removeLWoPDiv
-
-function removeOvertimeDiv (e) {
-	let otButtonsDiv = null;
-	let otFS = null;
-	let otDate = null;
-	let rmOTFS = null;
-	
-	otButtonsDiv = document.getElementById("otButtonsDiv");
-
-	overtimes--;
-	rmOTFS = document.getElementById("ot" + overtimes);
-	if (overtimes == 0) {
-		addOvertimeBtn.focus();
-	} else {
-		otFS = document.getElementById("ot" + (overtimes-1));
-		if (otFS) otFS.appendChild(otButtonsDiv);
-		otDate = document.getElementById("overtimeDate" + (overtimes-1));
-		if (otDate) otDate.focus();
-	}
-
-	rmOTFS.parentNode.removeChild(rmOTFS);
-	rmOTFS = null;
-
-	resultStatus.innerHTML="Overtime section removed.";
-} // End of removeOvertimeDiv
-
-function removeLumpSumDiv (e) {
-	let lumpSumButtonsDiv = null;
-	let lumpSumFS = null;
-	let lumpSumDate = null;
-	let rmLumpSumFS = null;
-	
-	lumpSumButtonsDiv = document.getElementById("lumpSumButtonsDiv");
-
-	lumpSums--;
-	rmLumpSumFS = document.getElementById("lumpSum" + lumpSums);
-	if (lumpSums == 0) {
-		addLumpSumBtn.focus();
-	} else {
-		lumpSumFS = document.getElementById("lumpSum" + (lumpSums-1));
-		if (lumpSumFS) lumpSumFS.appendChild(lumpSumButtonsDiv);
-		lumpSumDate = document.getElementById("lumpSumDate" + (lumpSums-1));
-		if (lumpSumDate) lumpSumDate.focus();
-	}
-
-	rmLumpSumFS.parentNode.removeChild(rmLumpSumFS);
-	rmLumpSumFS = null;
-
-	/*
-	var btn= e.target;
-	var btnID = btn.getAttribute("id")
-	btnID = btnID.replaceAll(/\D/g, "");
-	if (btnID > 0) btnID--;
-	var fs = btn.parentNode;
-	fs.parentNode.removeChild(fs);
-	lumpSums--;
-	if (lumpSums == 0 || btnID < 0) {
-		addLumpSumBtn.focus();
-	} else {
-		let lumpSumBtns = null;
-		lumpSumBtns = document.getElementById("addLumpSumsBtn" + btnID);
-		if (!lumpSumBtns) {
-			for (var j = btnID; lumpSumBtns === null && j >0; j--) {
-				lumpSumBtns = document.getElementById("addLumpSumsBtn" + j);
-			}
-			if (j == 0) lumpSumBtns = addLumpSumBtn;
-		}
-		
-
-		try {
-			lumpSumBtns.focus();
-		}
-		catch (ex) {
-			console.error ("Exception: " + ex.toString());
-			addLumpSumBtn.focus();
-		}
-	}
-	*/
-	resultStatus.innerHTML="Lump sum section removed.";
-} // End of removeLumpSumDiv
-
-
 function addPeriod (p) {
 	var rv = null;
 	if (dbug) console.log ("addPeriod::Gonna add period beginnging at " + p["startDate"] + " to periods (" + periods.length + ").");
@@ -1968,7 +1490,6 @@ let formatter = new Intl.NumberFormat('en-CA', {
   // Taken from https://stackoverflow.com/questions/149055/how-to-format-numbers-as-currency-string
 });
 
-
 function createHTMLElement (type, attribs) {
 	let newEl = document.createElement(type);
 	//This used to use a var mainForm, but I localized it to just access the element directly
@@ -2035,6 +1556,459 @@ function isReady () {
 	}
 } // End of isReader
 
+function addPromotionHandler() {
+	let toFocus = true;
+	let pdate = null;
+	let plvl = null;
+	if (arguments.length > 1) {
+		let args = arguments[1];
+		if (dbug) console.log("addPromotionHandler::arguments: " + arguments.length);
+		if (args.hasOwnProperty("toFocus")) toFocus = args["toFocus"];
+		if (args.hasOwnProperty("date")) {
+			pdate = (isValidDate(args["date"]) ? args["date"] : null);
+		}
+		if (args.hasOwnProperty("level")) {
+			plvl = args["level"].replaceAll(/\D/g, "");
+			plvl = (plvl > 0 && plvl < 6 ? plvl : null);
+		}
+		if (dbug) console.log(`addPromotionHandler::toFocus: ${toFocus}, pdate: ${pdate}, plvl: ${plvl}.`);
+	}
+	let promotionsDiv = document.getElementById("promotionsDiv");
+
+	// Find the next available promotion ID by extracting the highest current ID and incrementing it.
+
+	let id = 0;
+	while (document.getElementById("promo" + id)) { id++; }
+
+	let newPromotionFS = createHTMLElement("fieldset", { "parentNode": promotionsDiv, "class": "fieldHolder promotions", "id": "promo" + id});
+	createHTMLElement("legend", {"parentNode": newPromotionFS, "textNode": "Promotion " + (id + 1)});
+	createHTMLElement("label", { "parentNode": newPromotionFS, "for": "promoDate" + id, "nodeText": "Date of promotion: " });
+	let newPromoDate = createHTMLElement("input", { "parentNode": newPromotionFS, "type": "date", "id": "promoDate" + id, "aria-describedby": "dateFormat", "value": (pdate ? pdate : null) });
+	if (toFocus) newPromoDate.focus();
+
+	createHTMLElement("label", { "parentNode": newPromotionFS, "for": "promotionLevel" + id, "nodeText": "Promoted to level: " });
+	let newPromotionSel = createHTMLElement("select", {"parentNode": newPromotionFS, "id": "promotionLevel" + id});
+
+	// TODO: Add bookmarking options somewhere around here
+
+	for (let j = 0; j < data.chosenCA().levels; j++) {
+		let newPromoOpt = createHTMLElement("option", { "parentNode": newPromotionSel, "value": j, "nodeText": (classification +"-" + (j +1))});
+		if (plvl) { if (plvl === j) newPromoOpt.setAttribute("selected", "selected"); }
+		else {
+			if (level + 1 === j) newPromoOpt.setAttribute("selected", "selected");
+		}
+	}
+
+	let promoButtonsDiv = null;
+	if (id === 0) {
+		promoButtonsDiv = createHTMLElement("div", {"parentNode": newPromotionFS, "id": "promoButtonsDiv"});
+		let newDelPromotionBtn = createHTMLElement("input", {
+			"parentNode": promoButtonsDiv,
+			"type": "button",
+			"value": "Remove",
+			"id": "removePromotionBtn" + id
+		});
+		let newAddPromotionBtn = createHTMLElement("input", {
+			"parentNode": promoButtonsDiv,
+			"type": "button",
+			"value": getStr("addAnotherPromotion"),
+			"class": "promotionsBtn",
+			"id": "addPromotionsBtn" + id
+		});
+		newAddPromotionBtn.addEventListener("click", addPromotionHandler, false);
+		newDelPromotionBtn.addEventListener("click", removePromotionDiv, false);
+	} else {
+		promoButtonsDiv = document.getElementById("promoButtonsDiv");
+		newPromotionFS.appendChild(promoButtonsDiv);
+	}
+
+	resultStatus.innerHTML = "New Acting section added.";
+} // End of addPromotionHandler
+
+function addActingHandler () {
+	let toFocus = true;
+	let afdate = null;
+	let atdate = null;
+	let alvl = null;
+	if (arguments.length > 1) {
+		let args = arguments[1];
+		if (dbug) console.log ("addActingHandler::arguments: " + arguments.length);
+		if (args.hasOwnProperty("toFocus")) toFocus = args["toFocus"];
+		if (args.hasOwnProperty("from")) {
+			afdate = (isValidDate(args["from"]) ? args["from"] : null);
+		}
+		if (args.hasOwnProperty("to")) {
+			atdate = (isValidDate(args["to"]) ? args["to"] : null);
+		}
+		if (args.hasOwnProperty("level")) {
+			alvl = args["level"].replaceAll(/\D/g, "");
+			alvl = (alvl >0 && alvl <6 ? alvl : null);
+		}
+		if (dbug) console.log (`addActingHandler::toFocus: ${toFocus}, from: ${afdate} to ${atdate}, alvl: ${alvl}.`);
+	}
+
+	let actingsDiv = document.getElementById("actingsDiv");
+
+	let id = 0;
+	while (document.getElementById("actingLevel"+id) ) { id++; }
+
+	let newActingFS = createHTMLElement("fieldset", {"parentNode":actingsDiv, "class":"fieldHolder actingStints", "id":"acting"+id});
+	createHTMLElement("legend", {"parentNode":newActingFS, "textNode":"Acting Stint " + (id+1)});
+
+	createHTMLElement("label", {"parentNode":newActingFS, "textNode":"From", "for":"actingFrom" + id});
+	let newActingFromDate = createHTMLElement("input", {"parentNode":newActingFS, "id":"actingFrom"+id, "type":"date", "aria-describedby":"dateFormat", "value":(afdate ? afdate : null)});
+	createHTMLElement("label", {"parentNode":newActingFS, "textNode":"To", "for":"actingTo"+id});
+	createHTMLElement("input", {"parentNode":newActingFS, "id":"actingTo"+id, "type":"date", "aria-describedby":"dateFormat", "value":(atdate ? atdate : null)});
+
+	createHTMLElement("label", {"parentNode":newActingFS, "for":"actingLevel" + id, "nodeText":"Acting Level: "});
+	let newActingSel = createHTMLElement("select", {"parentNode":newActingFS, "id":"actingLevel" + id});
+
+	for (let j = 0; j < data.chosenCA().levels; j++) {
+		let newPromoOpt = createHTMLElement("option", {"parentNode":newActingSel, "value": j, "nodeText":classification + " - " + (j +1) });
+		if (alvl) {
+			if (alvl === j) newPromoOpt.setAttribute("selected", "selected");
+		} else {
+			if (level+1 === j) newPromoOpt.setAttribute("selected", "selected");
+		}
+	}
+
+	let actingButtonsDiv = null;
+	if (id === 0) {
+		actingButtonsDiv = createHTMLElement("div", {"parentNode":newActingFS, "id":"actingButtonsDiv"});
+		var newDelActingBtn = createHTMLElement("input", {"parentNode":actingButtonsDiv, "type":"button", "value":"Remove", "id": "removeActingBtn" + actings});
+		var newAddActingBtn = createHTMLElement("input", {"parentNode":actingButtonsDiv, "type":"button", "value":"Add another Acting", "class":"actingBtn", "id": "addActingsBtn" + id});
+		newAddActingBtn.addEventListener("click", addActingHandler, false);
+		newDelActingBtn.addEventListener("click", removeActingDiv, false);
+	} else {
+		actingButtonsDiv = document.getElementById("actingButtonsDiv");
+		newActingFS.appendChild(actingButtonsDiv);
+	}
+
+	if (toFocus) newActingFromDate.focus();
+
+	resultStatus.innerHTML="New Acting section added.";
+} // End of addActingHandler
+
+function addLWoPHandler () {
+	let toFocus = true;
+	let lfrom = null;
+	let lto = null;
+	if (arguments.length > 1) {
+		let args = arguments[1];
+		if (dbug) console.log ("addLWoPHandler::arguments: " + arguments.length);
+		if (args.hasOwnProperty("toFocus")) toFocus = args["toFocus"];
+		if (args.hasOwnProperty("from")) {
+			lfrom = (isValidDate(args["from"]) ? args["from"] : null);
+		}
+		if (args.hasOwnProperty("to")) {
+			lto = (isValidDate(args["to"]) ? args["to"] : null);
+		}
+		if (dbug) console.log (`addLWoPHandler::toFocus: ${toFocus}, from: ${lfrom} to ${lto}.`);
+	}
+
+	var LWoPDiv = document.getElementById("LWoPDiv");
+
+	let id = 0;
+	while (document.getElementById("lwopFrom"+id) ) { id++; }
+
+	let newLWoPFS = createHTMLElement("fieldset", {"parentNode":LWoPDiv, "class":"fieldHolder lwopStints", "id":"lwop"+id});
+	createHTMLElement("legend", {"parentNode":newLWoPFS, "textNode":"LWoP Stint " + (id+1)});
+
+	createHTMLElement("label", {"parentNode":newLWoPFS, "textNode":"From", "for":"lwopFrom" + id});
+	let newLWoPFromDate = createHTMLElement("input", {"parentNode":newLWoPFS, "id":"lwopFrom"+id, "type":"date", "aria-describedby":"dateFormat", "value":(lfrom ? lfrom : null)});
+	createHTMLElement("label", {"parentNode":newLWoPFS, "textNode":"To", "for":"lwopTo"+id});
+	let newLWoPToDate = createHTMLElement("input", {"parentNode":newLWoPFS, "id":"lwopTo"+id, "type":"date", "aria-describedby":"dateFormat", "value" : (lto ? lto : null)});
+
+	let lwopButtonsDiv = null;
+	if (id === 0) {
+		lwopButtonsDiv = createHTMLElement("div", {"parentNode":newLWoPFS, "id":"lwopButtonsDiv"});
+		var newDelLWoPBtn = createHTMLElement("input", {"parentNode":lwopButtonsDiv, "type":"button", "value":"Remove", "id": "removeLWoPBtn" + lwops});
+		var newAddLWoPBtn = createHTMLElement("input", {"parentNode":lwopButtonsDiv, "type":"button", "value":"Add another LWoP", "class":"lwopBtn", "id": "addLWoPsBtn" + id});
+		newAddLWoPBtn.addEventListener("click", addLWoPHandler, false);
+		newDelLWoPBtn.addEventListener("click", removeLWoPDiv, false);
+	} else {
+		lwopButtonsDiv = document.getElementById("lwopButtonsDiv");
+		newLWoPFS.appendChild(lwopButtonsDiv);
+	}
+
+	if (toFocus) newLWoPFromDate.focus();
+	resultStatus.innerHTML="New leave without pay section added.";
+} // End of lWoPHandler
+
+function addOvertimeHandler () {
+	let toFocus = true;
+	let otdate = null;
+	let othours = null;
+	let otrate = null;
+	if (arguments.length > 1) {
+		let args = arguments[1];
+		if (dbug) console.log ("addOvertimeHandler::arguments: " + arguments.length);
+		if (args.hasOwnProperty("toFocus")) toFocus = args["toFocus"];
+		if (args.hasOwnProperty("date")) {
+			otdate = (isValidDate(args["date"]) ? args["date"] : null);
+		}
+		if (args.hasOwnProperty("hours")) {
+			othours = (args["hours"] ? args["hours"] : null);
+		}
+		if (args.hasOwnProperty("rate")) {
+			otrate = (["rate"] ? args["rate"] : null);
+		}
+		if (dbug) console.log (`addOvertimeHandler::toFocus: ${toFocus}, date: ${otdate} hours ${othours}, rate: ${otrate}.`);
+	}
+
+	let OvertimeDiv = document.getElementById("overtimeDiv");
+
+	let id = 0;
+	while (document.getElementById("overtimeDate"+id) ) { id++; }
+
+	let newOvertimeFS = createHTMLElement("fieldset", {"parentNode":OvertimeDiv, "class":"fieldHolder overtimes", "id":"ot" + id});
+	createHTMLElement("legend", {"parentNode":newOvertimeFS, "textNode":"Overtime or Standby " + (id+1)});
+
+	let newDateFieldHolder = createHTMLElement("div", {"parentNode":newOvertimeFS, "class":"fieldHolder"});
+	createHTMLElement("label", {"parentNode":newDateFieldHolder, "textNode":"Date of Overtime:", "for":"overtimeDate" + id});
+	let newOvertimeDate = createHTMLElement("input", {"parentNode":newDateFieldHolder, "id":"overtimeDate"+id, "type":"date", "aria-describedby":"dateFormat", "value":(otdate ? otdate : null)});
+
+
+	let newAmountFieldHolder = createHTMLElement("div", {"parentNode":newOvertimeFS, "class":"fieldHolder"});
+	createHTMLElement("label", {"parentNode":newAmountFieldHolder, "textNode":"Hours-worth of overtime", "for":"overtimeAmount" + id});
+	createHTMLElement("input", {"parentNode":newAmountFieldHolder, "id":"overtimeAmount"+id, "type":"text", "value" : (othours ? othours : null)});
+
+	createHTMLElement("div", {"parentNode":newOvertimeFS, "class":"fieldHolder"});
+	createHTMLElement("label", {"parentNode":newAmountFieldHolder, "textNode":"Overtime Rate:", "for":"overtimeRate" + id});
+	let newOvertimeRate = createHTMLElement("select", {"parentNode":newAmountFieldHolder, "id":"overtimeRate"+id});
+	let rates = {"0" : "Select Overtime Rate", "0.125" : "1/8x - Standby", "1.0" : "1.0", "1.5" : "1.5", "2.0": "2.0"};
+	createHTMLElement("option", {"parentNode":newOvertimeRate, "value":"0", "nodeText":"Select Overtime Rate"});
+
+	for (let r in rates) {
+		let rt = createHTMLElement("option", {"parentNode":newOvertimeRate, "value":r, "nodeText": rates[r]});
+		if (otrate && otrate == r) rt.setAttribute("selected", "selected");
+	}
+
+
+	let otButtonsDiv = null;
+	if (id === 0) {
+		otButtonsDiv = createHTMLElement("div", {"parentNode":newOvertimeFS, "id":"otButtonsDiv"});
+		var newDelOvertimeBtn = createHTMLElement("input", {"parentNode":otButtonsDiv, "type":"button", "value":"Remove", "id": "removeOvertimeBtn" + overtimes});
+		var newAddOvertimeBtn = createHTMLElement("input", {"parentNode":otButtonsDiv, "type":"button", "value":"Add another Overtime", "class":"otBtn", "id": "addOvertimesBtn" + id});
+		newAddOvertimeBtn.addEventListener("click", addOvertimeHandler, false);
+		newDelOvertimeBtn.addEventListener("click", removeOvertimeDiv, false);
+	} else {
+		otButtonsDiv = document.getElementById("otButtonsDiv");
+		newOvertimeFS.appendChild(otButtonsDiv);
+	}
+	if (toFocus) newOvertimeDate.focus();
+
+	resultStatus.innerHTML="New overtime section added.";
+} // End of addOvertimeHandler
+
+function addLumpSumHandler () {
+	let toFocus = true;
+	let lsdate = null;
+	let lshours = null;
+	if (arguments.length > 1) {
+		let args = arguments[1];
+		if (dbug) console.log ("addLumpSumHandler::arguments: " + arguments.length);
+		if (args.hasOwnProperty("toFocus")) toFocus = args["toFocus"];
+		if (args.hasOwnProperty("date")) {
+			lsdate = (isValidDate(args["date"]) ? args["date"] : null);
+		}
+		if (args.hasOwnProperty("hours")) {
+			lshours = (args["hours"] ? args["hours"] : null);
+		}
+		if (dbug) console.log (`addLumpSumHandler::toFocus: ${toFocus}, date: ${lsdate} hours ${lshours}.`);
+	}
+
+	let LumpSumDiv = document.getElementById("lumpSumDiv");
+
+	let id = 0;
+	while (document.getElementById("lumpSumDate"+id) ) { id++; }
+
+	let newLumpSumFS = createHTMLElement("fieldset", {"parentNode":LumpSumDiv, "class":"fieldHolder lumpSums", "id":"lumpSum" + id});
+	createHTMLElement("legend", {"parentNode":newLumpSumFS, "textNode":"Lump Sum " + (id+1)});
+
+	let newDateFieldHolder = createHTMLElement("div", {"parentNode":newLumpSumFS, "class":"fieldHolder"});
+	createHTMLElement("label", {"parentNode":newDateFieldHolder, "textNode":"Date paid out:", "for":"lumpSumDate" + id});
+	let newLumpSumDate = createHTMLElement("input", {"parentNode":newDateFieldHolder, "id":"lumpSumDate"+id, "type":"date", "aria-describedby":"dateFormat", "value" : (lsdate ? lsdate : null)});
+
+	let newAmountFieldHolder = createHTMLElement("div", {"parentNode":newLumpSumFS, "class":"fieldHolder"});
+	createHTMLElement("label", {"parentNode":newAmountFieldHolder, "textNode":"Hours-worth of payout", "for":"lumpSumAmount" + id});
+	let newLumpSumAmount = createHTMLElement("input", {"parentNode":newAmountFieldHolder, "id":"lumpSumAmount"+id, "type":"text", "value" : (lshours ? lshours : "")});
+
+
+	let lumpSumButtonsDiv = null;
+	if (id === 0) {
+		lumpSumButtonsDiv = createHTMLElement("div", {"parentNode":newLumpSumFS, "id":"lumpSumButtonsDiv"});
+		let newDelLumpSumBtn = createHTMLElement("input", {"parentNode":lumpSumButtonsDiv, "type":"button", "value":"Remove", "id": "removeLumpSumBtn" + lumpSums});
+		let newAddLumpSumBtn = createHTMLElement("input", {"parentNode":lumpSumButtonsDiv, "type":"button", "value":"Add another LumpSum", "class":"lumpSumBtn", "id": "addLumpSumsBtn" + id});
+		newAddLumpSumBtn.addEventListener("click", addLumpSumHandler, false);
+		newDelLumpSumBtn.addEventListener("click", removeLumpSumDiv, false);
+	} else {
+		lumpSumButtonsDiv = document.getElementById("lumpSumButtonsDiv");
+		newLumpSumFS.appendChild(lumpSumButtonsDiv);
+	}
+
+	if (toFocus) newLumpSumDate.focus();
+
+
+	/*
+	var newDelLumpSumBtn = createHTMLElement("input", {"parentNode":newLumpSumFS, "type":"button", "value":"Remove", "id": "removeLumpSumBtn" + id});
+	var newAddLumpSumBtn = createHTMLElement("input", {"parentNode":newLumpSumFS, "type":"button", "value":"Add another Lump Sum period", "class":"lumpsumBtn", "id":"addLumpSumsBtn" + id});
+	newAddLumpSumBtn.addEventListener("click", addLumpSumHandler, false);
+	newDelLumpSumBtn.addEventListener("click", removeLumpSumDiv, false);
+	*/
+	resultStatus.innerHTML="New lump sum section added.";
+} // End of addLumpSum Handler
+
+function removePromotionDiv (e) {
+	let promoButtonsDiv = document.getElementById("promoButtonsDiv");
+	let promoFS = null;
+	let promoDate = null;
+
+	let promoText = e.target.closest(".promotions").id;
+	let promotions = Number(promoText.replace("promo",""));
+	let rmPromoFS = document.getElementById("promo" + promotions);
+	if (promotions === 0) {
+		addPromotionBtn.focus();
+	} else {
+		promoFS = document.getElementById("promo" + (promotions-1));
+		if (promoFS) promoFS.appendChild(promoButtonsDiv);
+		promoDate = document.getElementById("promoDate" + (promotions-1));
+		if (promoDate) promoDate.focus();
+	}
+
+	rmPromoFS.parentNode.removeChild(rmPromoFS);
+	rmPromoFS = null;
+
+	resultStatus.innerHTML="Promotion section removed.";
+} // End of removePromotionDiv
+
+function removeActingDiv (e) {
+	let actingFS = null;
+	let actingFromDate = null;
+	let actingButtonsDiv =  document.getElementById("actingButtonsDiv");
+
+	let actingText = e.target.closest(".actingStints").id;
+	let actings = Number(actingText.replace("acting",""));
+	let rmActingFS = document.getElementById("acting" + actings);
+
+	if (actings === 0) {
+		addActingBtn.focus();
+	} else {
+		actingFS = document.getElementById("acting" + (actings-1));
+		if (actingFS) actingFS.appendChild(actingButtonsDiv);
+		actingFromDate = document.getElementById("actingFromDate" + (actings-1));
+		if (actingFromDate) actingFromDate.focus();
+	}
+
+	rmActingFS.parentNode.removeChild(rmActingFS);
+	rmActingFS = null;
+
+	resultStatus.innerHTML="Acting section removed.";
+} // End of removeActingDiv
+
+function removeLWoPDiv (e) {
+	let lwopButtonsDiv = document.getElementById("lwopButtonsDiv");
+	let lwopFS = null;
+	let lwopDate = null;
+
+
+	let lwopText = e.target.closest(".lwopStints").id;
+	let lwops = Number(lwopText.replace("lwop",""));
+
+	let rmLwopFS = document.getElementById("lwop" + lwops);
+	if (lwops == 0) {
+		addLwopBtn.focus();
+	} else {
+		lwopFS = document.getElementById("lwop" + (lwops-1));
+		if (lwopFS) lwopFS.appendChild(lwopButtonsDiv);
+		lwopDate = document.getElementById("lwopFrom" + (lwops-1));
+		if (lwopDate) lwopDate.focus();
+	}
+
+	rmLwopFS.parentNode.removeChild(rmLwopFS);
+	rmLwopFS = null;
+	resultStatus.innerHTML="Leave Without Pay section removed.";
+} // End of removeLWoPDiv
+
+function removeOvertimeDiv (e) {
+	let otButtonsDiv = document.getElementById("otButtonsDiv");
+	let otFS = null;
+	let otDate = null;
+
+	let overtimesText = e.target.closest(".overtimes").id;
+	let overtimes = Number(overtimesText.replace("ot",""));
+
+	let rmOTFS = document.getElementById("ot" + overtimes);
+	if (overtimes == 0) {
+		addOvertimeBtn.focus();
+	} else {
+		otFS = document.getElementById("ot" + (overtimes-1));
+		if (otFS) otFS.appendChild(otButtonsDiv);
+		otDate = document.getElementById("overtimeDate" + (overtimes-1));
+		if (otDate) otDate.focus();
+	}
+
+	rmOTFS.parentNode.removeChild(rmOTFS);
+	rmOTFS = null;
+
+	resultStatus.innerHTML="Overtime section removed.";
+} // End of removeOvertimeDiv
+
+function removeLumpSumDiv (e) {
+	let lumpSumButtonsDiv = null;
+	let lumpSumFS = null;
+	let lumpSumDate = null;
+
+	lumpSumButtonsDiv = document.getElementById("lumpSumButtonsDiv");
+	let lumpSumText = e.target.closest(".lumpSums").id;
+	let lumpSums = Number(lumpSumText.replace("lumpSum",""));
+
+	let rmLumpSumFS = document.getElementById("lumpSum" + lumpSums);
+	if (lumpSums === 0) {
+		addLumpSumBtn.focus();
+	} else {
+		lumpSumFS = document.getElementById("lumpSum" + (lumpSums-1));
+		if (lumpSumFS) lumpSumFS.appendChild(lumpSumButtonsDiv);
+		lumpSumDate = document.getElementById("lumpSumDate" + (lumpSums-1));
+		if (lumpSumDate) lumpSumDate.focus();
+	}
+
+	rmLumpSumFS.parentNode.removeChild(rmLumpSumFS);
+	rmLumpSumFS = null;
+
+	/*
+	var btn= e.target;
+	var btnID = btn.getAttribute("id")
+	btnID = btnID.replaceAll(/\D/g, "");
+	if (btnID > 0) btnID--;
+	var fs = btn.parentNode;
+	fs.parentNode.removeChild(fs);
+	lumpSums--;
+	if (lumpSums == 0 || btnID < 0) {
+		addLumpSumBtn.focus();
+	} else {
+		let lumpSumBtns = null;
+		lumpSumBtns = document.getElementById("addLumpSumsBtn" + btnID);
+		if (!lumpSumBtns) {
+			for (var j = btnID; lumpSumBtns === null && j >0; j--) {
+				lumpSumBtns = document.getElementById("addLumpSumsBtn" + j);
+			}
+			if (j == 0) lumpSumBtns = addLumpSumBtn;
+		}
+
+
+		try {
+			lumpSumBtns.focus();
+		}
+		catch (ex) {
+			console.error ("Exception: " + ex.toString());
+			addLumpSumBtn.focus();
+		}
+	}
+	*/
+	resultStatus.innerHTML="Lump sum section removed.";
+} // End of removeLumpSumDiv
+
 function setupEventListeners() {
     let groupSel = document.getElementById("groupSelect");
     groupSel.addEventListener("change", function () {
@@ -2071,25 +2045,12 @@ function setupEventListeners() {
         resetSelectors("stepSel");
     }, false);
 
-	let calcBtn = document.getElementById("calcBtn"); // Get rid of this if not used elsewhere
-	calcBtn.addEventListener("click", startProcess);
-
-	let addActingBtn = document.getElementById("addActingBtn");
-    addActingBtn.addEventListener("click", addActingHandler, false);
-
-	let addLwopBtn = document.getElementById("addLwopBtn");
-	addLwopBtn.addEventListener("click", addLWoPHandler, false);
-
-	let addOvertimeBtn = document.getElementById("addOvertimeBtn");
-	addOvertimeBtn.addEventListener("click", addOvertimeHandler, false);
-
-	let addLumpSumBtn = document.getElementById("addLumpSumBtn");
-
-	addLumpSumBtn.addEventListener("click", addLumpSumHandler, false);
-
-	let addPromotionBtn = document.getElementById("addPromotionBtn");
-	addPromotionBtn.addEventListener("click", addPromotionHandler, false);
-
+	document.getElementById("calcBtn").addEventListener("click", startProcess);
+	document.getElementById("addActingBtn").addEventListener("click", addActingHandler, false);
+	document.getElementById("addLwopBtn").addEventListener("click", addLWoPHandler, false);
+	document.getElementById("addOvertimeBtn").addEventListener("click", addOvertimeHandler, false);
+	document.getElementById("addLumpSumBtn").addEventListener("click", addLumpSumHandler, false);
+	document.getElementById("addPromotionBtn").addEventListener("click", addPromotionHandler, false);
 } // End of setupEventListeners
 
 function main() {
