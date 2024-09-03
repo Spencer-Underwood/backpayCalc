@@ -1176,7 +1176,7 @@ function addPromotionHandler() {
 	// Find the next available promotion ID by extracting the highest current ID and incrementing it.
 
 	let id = 0;
-	while (promotionsDiv.querySelector("#promo" + id)) { id++; }
+	while (document.getElementById("promo" + id)) { id++; }
 
 	let newPromotionFS = createHTMLElement("fieldset", { "parentNode": promotionsDiv, "class": "fieldHolder promotions", "id": "promo" + id});
 	createHTMLElement("legend", {"parentNode": newPromotionFS, "textNode": "Promotion " + (id + 1)});
@@ -1223,29 +1223,6 @@ function addPromotionHandler() {
 	resultStatus.innerHTML = "New Acting section added.";
 } // End of addPromotionHandler
 
-function removePromotionDiv (e) {
-	let promoButtonsDiv = document.getElementById("promoButtonsDiv");
-	let promoFS = null;
-	let promoDate = null;
-
-	let promoText = e.target.closest(".promotions").id;
-	let promotions = Number(promoText.replace("promo",""));
-	let rmPromoFS = document.getElementById("promo" + promotions);
-	if (promotions === 0) {
-		addPromotionBtn.focus();
-	} else {
-		promoFS = document.getElementById("promo" + (promotions-1));
-		if (promoFS) promoFS.appendChild(promoButtonsDiv);
-		promoDate = document.getElementById("promoDate" + (promotions-1));
-		if (promoDate) promoDate.focus();
-	}
-
-	rmPromoFS.parentNode.removeChild(rmPromoFS);
-	rmPromoFS = null;
-
-	resultStatus.innerHTML="Promotion section removed.";
-} // End of removePromotionDiv
-
 function addActingHandler () {
 	let toFocus = true;
 	let afdate = null;
@@ -1268,42 +1245,33 @@ function addActingHandler () {
 		if (dbug) console.log (`addActingHandler::toFocus: ${toFocus}, from: ${afdate} to ${atdate}, alvl: ${alvl}.`);
 	}
 
-	var actingsDiv = document.getElementById("actingsDiv");
-	
-	var id = actings;
-	var looking = true;
-	while (looking) {
-		if (document.getElementById("actingLevel" + id)) {
-			id++;
-		} else {
-			looking = false;
-		}
-	}
+	let actingsDiv = document.getElementById("actingsDiv");
 
-	var newActingFS = createHTMLElement("fieldset", {"parentNode":actingsDiv, "class":"fieldHolder actingStints", "id":"acting"+id});
-	var newActingLegend = createHTMLElement("legend", {"parentNode":newActingFS, "textNode":"Acting Stint " + (id+1)});
+	let id = 0;
+	while (document.getElementById("actingLevel"+id) ) { id++; }
 
-	var newActingFromLbl = createHTMLElement("label", {"parentNode":newActingFS, "textNode":"From", "for":"actingFrom" + id});
-	var newActingFromDate = createHTMLElement("input", {"parentNode":newActingFS, "id":"actingFrom"+id, "type":"date", "aria-describedby":"dateFormat", "value":(afdate ? afdate : null)});
-	var newActingToLbl = createHTMLElement("label", {"parentNode":newActingFS, "textNode":"To", "for":"actingTo"+id});
-	var newActingToDate = createHTMLElement("input", {"parentNode":newActingFS, "id":"actingTo"+id, "type":"date", "aria-describedby":"dateFormat", "value":(atdate ? atdate : null)});
+	let newActingFS = createHTMLElement("fieldset", {"parentNode":actingsDiv, "class":"fieldHolder actingStints", "id":"acting"+id});
+	createHTMLElement("legend", {"parentNode":newActingFS, "textNode":"Acting Stint " + (id+1)});
 
-	var newLevelLbl = createHTMLElement("label", {"parentNode":newActingFS, "for":"actingLevel" + id, "nodeText":"Acting Level: "});
-	var newActingSel = createHTMLElement("select", {"parentNode":newActingFS, "id":"actingLevel" + id});
-	for (var j = 0; j < 6; j++) {
-		var newPromoOpt = createHTMLElement("option", {"parentNode":newActingSel, "value": j, "nodeText":(j == 0 ? "Select Level" : "CS-0" + j)});
+	createHTMLElement("label", {"parentNode":newActingFS, "textNode":"From", "for":"actingFrom" + id});
+	let newActingFromDate = createHTMLElement("input", {"parentNode":newActingFS, "id":"actingFrom"+id, "type":"date", "aria-describedby":"dateFormat", "value":(afdate ? afdate : null)});
+	createHTMLElement("label", {"parentNode":newActingFS, "textNode":"To", "for":"actingTo"+id});
+	createHTMLElement("input", {"parentNode":newActingFS, "id":"actingTo"+id, "type":"date", "aria-describedby":"dateFormat", "value":(atdate ? atdate : null)});
+
+	createHTMLElement("label", {"parentNode":newActingFS, "for":"actingLevel" + id, "nodeText":"Acting Level: "});
+	let newActingSel = createHTMLElement("select", {"parentNode":newActingFS, "id":"actingLevel" + id});
+
+	for (let j = 0; j < data.chosenCA().levels+1; j++) {
+		let newPromoOpt = createHTMLElement("option", {"parentNode":newActingSel, "value": j, "nodeText":(j === 0 ? "Select Level" : classification + " - " + j)});
 		if (alvl) {
-			if (alvl == j) newPromoOpt.setAttribute("selected", "selected");
+			if (alvl === j) newPromoOpt.setAttribute("selected", "selected");
 		} else {
-			if (parseInt(levelSel.value)+1 == j) newPromoOpt.setAttribute("selected", "selected");
+			if (level+1 === j) newPromoOpt.setAttribute("selected", "selected");
 		}
 	}
-
-
-	//newActingSel.addEventListener("change", saveValue, false);
 
 	let actingButtonsDiv = null;
-	if (id == 0) {
+	if (id === 0) {
 		actingButtonsDiv = createHTMLElement("div", {"parentNode":newActingFS, "id":"actingButtonsDiv"});
 		var newDelActingBtn = createHTMLElement("input", {"parentNode":actingButtonsDiv, "type":"button", "value":"Remove", "id": "removeActingBtn" + actings});
 		var newAddActingBtn = createHTMLElement("input", {"parentNode":actingButtonsDiv, "type":"button", "value":"Add another Acting", "class":"actingBtn", "id": "addActingsBtn" + id});
@@ -1316,7 +1284,6 @@ function addActingHandler () {
 
 	if (toFocus) newActingFromDate.focus();
 
-	actings++;
 	resultStatus.innerHTML="New Acting section added.";
 } // End of addActingHandler
 
@@ -1513,7 +1480,28 @@ function addLumpSumHandler () {
 	resultStatus.innerHTML="New lump sum section added.";
 } // End of addLumpSum Handler
 
+function removePromotionDiv (e) {
+	let promoButtonsDiv = document.getElementById("promoButtonsDiv");
+	let promoFS = null;
+	let promoDate = null;
 
+	let promoText = e.target.closest(".promotions").id;
+	let promotions = Number(promoText.replace("promo",""));
+	let rmPromoFS = document.getElementById("promo" + promotions);
+	if (promotions === 0) {
+		addPromotionBtn.focus();
+	} else {
+		promoFS = document.getElementById("promo" + (promotions-1));
+		if (promoFS) promoFS.appendChild(promoButtonsDiv);
+		promoDate = document.getElementById("promoDate" + (promotions-1));
+		if (promoDate) promoDate.focus();
+	}
+
+	rmPromoFS.parentNode.removeChild(rmPromoFS);
+	rmPromoFS = null;
+
+	resultStatus.innerHTML="Promotion section removed.";
+} // End of removePromotionDiv
 
 function removeActingDiv (e) {
 	let actingButtonsDiv = null;
@@ -1540,6 +1528,7 @@ function removeActingDiv (e) {
 
 	resultStatus.innerHTML="Acting section removed.";
 } // End of removeActingDiv
+
 function removeLWoPDiv (e) {
 	let lwopButtonsDiv = null;
 	let lwopFS = null;
@@ -1998,7 +1987,7 @@ function addStartDateErrorMessage () {
 	return;
 }
 
-var formatter = new Intl.NumberFormat('en-CA', {
+let formatter = new Intl.NumberFormat('en-CA', {
   style: 'currency',
   currency: 'CAD',
 
