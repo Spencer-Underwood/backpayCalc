@@ -12,6 +12,10 @@ const i18n = {
         en: "Select the collective agreement",
         fr: "Sélectionnez votre convention collective"
     },
+    selectLevel: {
+        en: "Select your level",
+        fr: "Sélectionnez votre niveau"
+    },
     startDateLgnd: {
         en: "Were you in classification {{classification}} on {{startDate}}?",
         fr: "Étiez-vous dans la {{classification}} le {{startDate}}"
@@ -79,7 +83,11 @@ const i18n = {
     info: {
         en: "Info",
         fr: "Info"
-    }
+    },
+    addAnotherPromotion: {
+        en: "Add another promotion",
+        fr: "FR: Add Another promotion", //TODO: translate this
+    },
 };
 
 // Export the object so it can be used in other parts of your application

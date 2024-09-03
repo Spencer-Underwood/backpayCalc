@@ -64,11 +64,9 @@ let level = -1;
 let step = -1;
 
 // Helper function to skip directly to CA when group / class / CA are defined.
-data.chosenCA = undefined; // Only needed so my IDE recognizes this exists
-Object.defineProperty(data, 'chosenCA', {
-    get: function() { return this[group][classification][chosenCA]; },
-    enumerable: false // Ensure this property is not enumerated
-});
+data.chosenCA = function() {
+    return this[group][classification][chosenCA];
+};
 
 //let levelSel = document.getElementById("levelSelect");
 //var stepSel = document.getElementById("stepSelect");
@@ -80,11 +78,11 @@ var resultStatus = document.getElementById("resultStatus");
 var calcStartDate = document.getElementById("calcStartDate");
 var endDateTxt = document.getElementById("endDateTxt");
 // Buttons
-var addPromotionBtn = document.getElementById("addPromotionBtn");
-var addActingBtn = document.getElementById("addActingBtn");
-var addOvertimeBtn = document.getElementById("addOvertimeBtn");
-var addLwopBtn = document.getElementById("addLwopBtn");
-var addLumpSumBtn = document.getElementById("addLumpSumBtn");
+// var addPromotionBtn = document.getElementById("addPromotionBtn");
+// var addActingBtn = document.getElementById("addActingBtn");
+// var addOvertimeBtn = document.getElementById("addOvertimeBtn");
+// var addLwopBtn = document.getElementById("addLwopBtn");
+// var addLumpSumBtn = document.getElementById("addLumpSumBtn");
 // Result elements
 var resultsDiv = document.getElementById("resultsDiv");
 var resultsBody = document.getElementById("resultsBody");
@@ -143,68 +141,6 @@ var hourly = [
 //var days = [31, 29, 31
 
 // #endregion variables
-
-
-function main() {
-	console.log("Got data:", data);
-	console.log("Got i18n: ", i18n);
-
-	lang = document.documentElement.lang;
-	console.debug("Got lang " + lang);
-	generateAllRates();
-	
-	if (dbug) {
-		group="IT Group";
-		classification = "IT";
-		chosenCA = "2021-2025";
-
-		populateGroupSelect ("IT Group");
-		populateClassificationSelect("IT");
-		populateCASelect("2021-2025");
-		generateTables(data.chosenCA);
-	} else {populateGroupSelect ();}
-
-
-    setupEventListeners();  // Moved all event listener setup to a separate function
-} // End of main
-
-function setupEventListeners() {
-    let groupSel = document.getElementById("groupSelect");
-    groupSel.addEventListener("change", function () {
-        group = groupSel.value;
-        resetSelectors("groupSel");
-        populateClassificationSelect();
-    }, false);
-
-    let classSel = document.getElementById("classificationSelect");
-    classSel.addEventListener("change", function () {
-        classification = classSel.value;
-        resetSelectors("classSel");
-        populateCASelect();
-    }, false);
-
-    let CASel = document.getElementById("CASelect");
-    CASel.addEventListener("change", function () {
-        chosenCA = CASel.value;
-        resetSelectors("CASel");
-        populateLevelSelect();
-        generateTables(data.chosenCA);
-    }, false);
-
-    let levelSel = document.getElementById("levelSelect");
-    levelSel.addEventListener("change", function () {
-        level = levelSel.value;
-        resetSelectors("levelSel");
-        populateStepSelect();
-    }, false);
-
-    let stepSel = document.getElementById("stepSelect");
-    stepSel.addEventListener("change", function () {
-        step = stepSel.value;
-        resetSelectors("stepSel");
-    }, false);
-} // End of setupEventListeners
-
 function oldinit () {
 	if (dbug) console.log ("Initting");
 	//saveValues = new Map();
@@ -255,12 +191,12 @@ function oldinit () {
 		startDateTxt.addEventListener("change", selectSalary, false);
 		if (startDateTxt.value.replace(/[^-\d]/, "").match(/YYYY-MM-DD/)) populateSalary();
 
-		calcBtn.addEventListener("click", startProcess, false);
-		addActingBtn.addEventListener("click", addActingHandler, false);
-		addLwopBtn.addEventListener("click", addLWoPHandler, false);
-		addOvertimeBtn.addEventListener("click", addOvertimeHandler, false);
-		addLumpSumBtn.addEventListener("click", addLumpSumHandler, false);
-		addPromotionBtn.addEventListener("click", addPromotionHandler, false);
+		// calcBtn.addEventListener("click", startProcess, false);
+		// addActingBtn.addEventListener("click", addActingHandler, false);
+		// addLwopBtn.addEventListener("click", addLWoPHandler, false);
+		// addOvertimeBtn.addEventListener("click", addOvertimeHandler, false);
+		// addLumpSumBtn.addEventListener("click", addLumpSumHandler, false);
+		// addPromotionBtn.addEventListener("click", addPromotionHandler, false);
 	} else {
 		if (dbug) console.error ("Couldn't get levelSelect.");
 	}
@@ -308,7 +244,7 @@ function populateCASelect(bookmarkCA = null) {
 function populateLevelSelect(bookmarkLevel = null){
 	let levelSel = document.getElementById("levelSelect");
 	levelSel.length = 1;
-    for (let i = 0; i < data.chosenCA.levels; i++) {
+    for (let i = 0; i < data.chosenCA().levels; i++) {
 		let attributes = {"parentNode": levelSel, "textNode": `${classification}-${i + 1}`, "value": i};
 		if (i === bookmarkLevel) { attributes["selected"] = true; }
 		createHTMLElement("option", attributes);
@@ -316,10 +252,11 @@ function populateLevelSelect(bookmarkLevel = null){
 } // End of populateLevelSelect
 
 function populateStepSelect(bookmarkStep = null){
-	let steps =  data[group][classification][chosenCA].salaries.annual[level];
+	let stepSel = document.getElementById("stepSelect");
+	let steps =  data.chosenCA().salaries[level];
 
 	for (let i = 0; i < steps.length; i++) {
-		let attributes = {"parentNode": stepSel, "textNode": steps[i], "value": i};
+		let attributes = {"parentNode": stepSel, "textNode": `Step ${i+1} - ${ getNum(steps[i]) }`, "value": i};
 		if (i === bookmarkStep) { attributes["selected"] = true; }
 		createHTMLElement("option", attributes);
     }
@@ -450,7 +387,6 @@ function generateAllRates() {
 	}
 } // End of generateAllRates
 
-
 function generateTables(CA) {
     // TODO: handle options or parameters or whatnot
 	let levels = CA.levels;
@@ -549,7 +485,6 @@ function getNum(num) {
 		return formatter.format(num);
 	}
 } // End of getNum
-
 
 // Check the document location for saved things
 function handleHash () {
@@ -1219,88 +1154,99 @@ function getLumpSums () {
 	}
 } // End of getLumpSums
 
-const addPromotionHandler = (function () {
-	// Descoped this from global to local variable
-	let promotions = 0;
+function addPromotionHandler() {
 	const levelSel = document.getElementById("levelSelect");
 
-	return function addPromotionHandler(e, o) {
-		let toFocus = true;
-		let pdate = null;
-		let plvl = null;
-		if (arguments.length > 1) {
-			let args = arguments[1];
-			if (dbug) console.log("addPromotionHandler::arguments: " + arguments.length);
-			if (args.hasOwnProperty("toFocus")) toFocus = args["toFocus"];
-			if (args.hasOwnProperty("date")) {
-				pdate = (isValidDate(args["date"]) ? args["date"] : null);
-			}
-			if (args.hasOwnProperty("level")) {
-				plvl = args["level"].replaceAll(/\D/g, "");
-				plvl = (plvl > 0 && plvl < 6 ? plvl : null);
-			}
-			if (dbug) console.log(`addPromotionHandler::toFocus: ${toFocus}, pdate: ${pdate}, plvl: ${plvl}.`);
+	let toFocus = true;
+	let pdate = null;
+	let plvl = null;
+	if (arguments.length > 1) {
+		let args = arguments[1];
+		if (dbug) console.log("addPromotionHandler::arguments: " + arguments.length);
+		if (args.hasOwnProperty("toFocus")) toFocus = args["toFocus"];
+		if (args.hasOwnProperty("date")) {
+			pdate = (isValidDate(args["date"]) ? args["date"] : null);
 		}
-		let promotionsDiv = document.getElementById("promotionsDiv");
-
-		// Find the next available promotion ID by extracting the highest current ID and incrementing it.
-		let existingPromotions = promotionsDiv.querySelectorAll("[id^='promotion']");
-		let maxId = Array.from(existingPromotions)
-			.map(el => parseInt(el.id.replace('promotion', ''), 10))
-			.reduce((max, current) => Math.max(max, current), -1);
-		let id = maxId + 1;
-
-		let newPromotionFS = createHTMLElement("fieldset", { "parentNode": promotionsDiv, "class": "fieldHolder promotions", "id": "promo" + id});
-		createHTMLElement("legend", { "parentNode": newPromotionFS, "textNode": "Promotion " + (id + 1) });
-		createHTMLElement("label", { "parentNode": newPromotionFS, "for": "promoDate" + id, "nodeText": "Date of promotion: "});
-		let newPromoDate = createHTMLElement("input", { "parentNode": newPromotionFS, "type": "date", "id": "promoDate" + id, "aria-describedby": "dateFormat","value": (pdate ? pdate : null) });
-		if (toFocus) newPromoDate.focus();
-
-		createHTMLElement("label", { "parentNode": newPromotionFS, "for": "promotionLevel" + id, "nodeText": "Promoted to level: " });
-		let newPromotionSel = createHTMLElement("select", {"parentNode": newPromotionFS, "id": "promotionLevel" + id});
-		// TODO:
-		chosenCA.salaries.annual.length;
-		for (let j = 0; j < 6; j++) {
-			let newPromoOpt = createHTMLElement("option", {
-				"parentNode": newPromotionSel,
-				"value": j,
-				"nodeText": (j === 0 ? "Select Level" : "CS-0" + j)
-			});
-			if (plvl) {
-				if (plvl == j) newPromoOpt.setAttribute("selected", "selected");
-			} else {
-				if (parseInt(levelSel.value) + 1 == j) newPromoOpt.setAttribute("selected", "selected");
-			}
+		if (args.hasOwnProperty("level")) {
+			plvl = args["level"].replaceAll(/\D/g, "");
+			plvl = (plvl > 0 && plvl < 6 ? plvl : null);
 		}
-
-		let promoButtonsDiv = null;
-		if (id == 0) {
-			promoButtonsDiv = createHTMLElement("div", {"parentNode": newPromotionFS, "id": "promoButtonsDiv"});
-			var newDelPromotionBtn = createHTMLElement("input", {
-				"parentNode": promoButtonsDiv,
-				"type": "button",
-				"value": "Remove",
-				"id": "removePromotionBtn" + promotions
-			});
-			var newAddPromotionBtn = createHTMLElement("input", {
-				"parentNode": promoButtonsDiv,
-				"type": "button",
-				"value": "Add another promotion",
-				"class": "promotionsBtn",
-				"id": "addPromotionsBtn" + id
-			});
-			newAddPromotionBtn.addEventListener("click", addPromotionHandler, false);
-			newDelPromotionBtn.addEventListener("click", removePromotionDiv, false);
-		} else {
-			promoButtonsDiv = document.getElementById("promoButtonsDiv");
-			newPromotionFS.appendChild(promoButtonsDiv);
-		}
-
-		promotions++;
-
-		resultStatus.innerHTML = "New Acting section added.";
+		if (dbug) console.log(`addPromotionHandler::toFocus: ${toFocus}, pdate: ${pdate}, plvl: ${plvl}.`);
 	}
-});// End of addPromotionHandler
+	let promotionsDiv = document.getElementById("promotionsDiv");
+
+	// Find the next available promotion ID by extracting the highest current ID and incrementing it.
+
+	let id = 0;
+	while (promotionsDiv.querySelector("#promo" + id)) { id++; }
+
+	let newPromotionFS = createHTMLElement("fieldset", { "parentNode": promotionsDiv, "class": "fieldHolder promotions", "id": "promo" + id});
+	createHTMLElement("legend", {"parentNode": newPromotionFS, "textNode": "Promotion " + (id + 1)});
+	createHTMLElement("label", { "parentNode": newPromotionFS, "for": "promoDate" + id, "nodeText": "Date of promotion: " });
+	let newPromoDate = createHTMLElement("input", { "parentNode": newPromotionFS, "type": "date", "id": "promoDate" + id, "aria-describedby": "dateFormat", "value": (pdate ? pdate : null) });
+	if (toFocus) newPromoDate.focus();
+
+	createHTMLElement("label", { "parentNode": newPromotionFS, "for": "promotionLevel" + id, "nodeText": "Promoted to level: " });
+	let newPromotionSel = createHTMLElement("select", {"parentNode": newPromotionFS, "id": "promotionLevel" + id});
+
+	// TODO: Add bookmarking options somewhere around here
+
+	for (let j = 0; j < data.chosenCA().levels; j++) {
+		let newPromoOpt = createHTMLElement("option", { "parentNode": newPromotionSel, "value": j, "nodeText": (classification +"-" + (j +1))});
+		if (plvl) { if (plvl === j) newPromoOpt.setAttribute("selected", "selected"); }
+		else {
+			if (level + 1 === j) newPromoOpt.setAttribute("selected", "selected");
+		}
+	}
+
+	let promoButtonsDiv = null;
+	if (id === 0) {
+		promoButtonsDiv = createHTMLElement("div", {"parentNode": newPromotionFS, "id": "promoButtonsDiv"});
+		let newDelPromotionBtn = createHTMLElement("input", {
+			"parentNode": promoButtonsDiv,
+			"type": "button",
+			"value": "Remove",
+			"id": "removePromotionBtn" + id
+		});
+		let newAddPromotionBtn = createHTMLElement("input", {
+			"parentNode": promoButtonsDiv,
+			"type": "button",
+			"value": getStr("addAnotherPromotion"),
+			"class": "promotionsBtn",
+			"id": "addPromotionsBtn" + id
+		});
+		newAddPromotionBtn.addEventListener("click", addPromotionHandler, false);
+		newDelPromotionBtn.addEventListener("click", removePromotionDiv, false);
+	} else {
+		promoButtonsDiv = document.getElementById("promoButtonsDiv");
+		newPromotionFS.appendChild(promoButtonsDiv);
+	}
+
+	resultStatus.innerHTML = "New Acting section added.";
+} // End of addPromotionHandler
+
+function removePromotionDiv (e) {
+	let promoButtonsDiv = document.getElementById("promoButtonsDiv");
+	let promoFS = null;
+	let promoDate = null;
+
+	let promoText = e.target.closest(".promotions").id;
+	let promotions = Number(promoText.replace("promo",""));
+	let rmPromoFS = document.getElementById("promo" + promotions);
+	if (promotions === 0) {
+		addPromotionBtn.focus();
+	} else {
+		promoFS = document.getElementById("promo" + (promotions-1));
+		if (promoFS) promoFS.appendChild(promoButtonsDiv);
+		promoDate = document.getElementById("promoDate" + (promotions-1));
+		if (promoDate) promoDate.focus();
+	}
+
+	rmPromoFS.parentNode.removeChild(rmPromoFS);
+	rmPromoFS = null;
+
+	resultStatus.innerHTML="Promotion section removed.";
+} // End of removePromotionDiv
 
 function addActingHandler () {
 	let toFocus = true;
@@ -1569,30 +1515,7 @@ function addLumpSumHandler () {
 	resultStatus.innerHTML="New lump sum section added.";
 } // End of addLumpSum Handler
 
-function removePromotionDiv (e) {
-	let promoButtonsDiv = null;
-	let promoFS = null;
-	let promoDate = null;
-	let rmPromoFS = null;
-	
-	promoButtonsDiv = document.getElementById("promoButtonsDiv");
 
-	promotions--;
-	rmPromoFS = document.getElementById("promo" + promotions);
-	if (promotions == 0) {
-		addPromotionBtn.focus();
-	} else {
-		promoFS = document.getElementById("promo" + (promotions-1));
-		if (promoFS) promoFS.appendChild(promoButtonsDiv);
-		promoDate = document.getElementById("promoDate" + (promotions-1));
-		if (promoDate) promoDate.focus();
-	}
-
-	rmPromoFS.parentNode.removeChild(rmPromoFS);
-	rmPromoFS = null;
-
-	resultStatus.innerHTML="Promotion section removed.";
-} // End of removePromotionDiv
 
 function removeActingDiv (e) {
 	let actingButtonsDiv = null;
@@ -2154,6 +2077,89 @@ function isReady () {
 	}
 } // End of isReader
 
+function setupEventListeners() {
+    let groupSel = document.getElementById("groupSelect");
+    groupSel.addEventListener("change", function () {
+        group = groupSel.value;
+        resetSelectors("groupSel");
+        populateClassificationSelect();
+    }, false);
+
+    let classSel = document.getElementById("classificationSelect");
+    classSel.addEventListener("change", function () {
+        classification = classSel.value;
+        resetSelectors("classSel");
+        populateCASelect();
+    }, false);
+
+    let CASel = document.getElementById("CASelect");
+    CASel.addEventListener("change", function () {
+        chosenCA = CASel.value;
+        resetSelectors("CASel");
+        populateLevelSelect();
+        generateTables(data.chosenCA());
+    }, false);
+
+    let levelSel = document.getElementById("levelSelect");
+    levelSel.addEventListener("change", function () {
+        level = Number(levelSel.value);
+        resetSelectors("levelSel");
+        populateStepSelect();
+    }, false);
+
+    let stepSel = document.getElementById("stepSelect");
+    stepSel.addEventListener("change", function () {
+        step = stepSel.value;
+        resetSelectors("stepSel");
+    }, false);
+
+	let calcBtn = document.getElementById("calcBtn"); // Get rid of this if not used elsewhere
+	calcBtn.addEventListener("click", startProcess);
+
+	let addActingBtn = document.getElementById("addActingBtn");
+    addActingBtn.addEventListener("click", addActingHandler, false);
+
+	let addLwopBtn = document.getElementById("addLwopBtn");
+	addLwopBtn.addEventListener("click", addLWoPHandler, false);
+
+	let addOvertimeBtn = document.getElementById("addOvertimeBtn");
+	addOvertimeBtn.addEventListener("click", addOvertimeHandler, false);
+
+	let addLumpSumBtn = document.getElementById("addLumpSumBtn");
+
+	addLumpSumBtn.addEventListener("click", addLumpSumHandler, false);
+
+	let addPromotionBtn = document.getElementById("addPromotionBtn");
+	addPromotionBtn.addEventListener("click", addPromotionHandler, false);
+
+} // End of setupEventListeners
+
+function main() {
+	console.log("Got data:", data);
+	console.log("Got i18n: ", i18n);
+
+	lang = document.documentElement.lang;
+	console.debug("Got lang " + lang);
+	generateAllRates();
+
+	if (dbug) {
+		group="IT Group";
+		classification = "IT";
+		chosenCA = "2021-2025";
+		level=0;
+		step=0;
+
+		populateGroupSelect ("IT Group");
+		populateClassificationSelect("IT");
+		populateCASelect("2021-2025");
+		generateTables(data.chosenCA());
+		populateLevelSelect(0);
+		populateStepSelect(0);
+	} else {populateGroupSelect ();}
+
+
+    setupEventListeners();  // Moved all event listener setup to a separate function
+} // End of main
 
 if (dbug) console.log ("Finished loading backpayCalc.js.");
 main();
