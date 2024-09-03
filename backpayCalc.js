@@ -1155,8 +1155,6 @@ function getLumpSums () {
 } // End of getLumpSums
 
 function addPromotionHandler() {
-	const levelSel = document.getElementById("levelSelect");
-
 	let toFocus = true;
 	let pdate = null;
 	let plvl = null;
