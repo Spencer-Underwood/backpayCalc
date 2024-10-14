@@ -68,6 +68,12 @@ data.chosenCA = function() {
     return this[group][classification][chosenCA];
 };
 
+
+var periods = [];
+var lumpSumPeriods = {};
+var overtimePeriods = {};
+
+
 //let levelSel = document.getElementById("levelSelect");
 //var stepSel = document.getElementById("stepSelect");
 // Form elements
@@ -89,16 +95,14 @@ var resultsBody = document.getElementById("resultsBody");
 var resultsFoot = document.getElementById("resultsFoot");
 var resultsTheadTR = document.getElementById("resultsTheadTR");
 // Maths Stuff ?
-var numPromotions = null;
-var startingSalary = 0;
 var TABegin = new Date("2021", "11", "22");		// Remember months:  0 == Janaury, 1 == Feb, etc.
 var EndDate = new Date("2024", "02", "17");		// This is the day after this should stop calculating; same as endDateTxt.value in the HTML
 var day = (1000 * 60 * 60 * 24);
 var parts = [];
-var periods = [];
+
+
+
 var initPeriods = [];
-var lumpSumPeriods = {};
-var overtimePeriods = {};
 //var promotions = 0;
 var actings = 0;
 var lumpSums = 0;
@@ -230,7 +234,9 @@ function populateStepSelect(bookmarkStep = null){
 
 	for (let i = 0; i < steps.length; i++) {
 		let attributes = {"parentNode": stepSel, "textNode": `Step ${i+1} - ${ getNum(steps[i]) }`, "value": i};
-		if (i === bookmarkStep) { attributes["selected"] = true; }
+		if (i === Number(bookmarkStep) ){
+			attributes["selected"] = true;
+		}
 		createHTMLElement("option", attributes);
     }
 } // End of populateStepSelect
@@ -671,48 +677,40 @@ function populateSalary () {
 // Once a CS-level and startDate have been selected, select the most likely salary from the dropdown
 // Called from init when startDateTxt has changed, and from populateSalary if startDateTxt is a date (####-##-##)
 
-// I don't get it.  What's the difference btween selectSalary and getSalary?
-// They both start the same way: get the startDateText date, check for leapyear, set the startDateTxt value, figure out your step, select the step
-function selectSalary () {
-	//if (!(levelSelect.value > 0 && levelSelect.value <= 5))
-	if (parts && levelSel.value >0 && levelSel.value <= 5) {	// if you have a start date, and a CS-0x level
-		let startDate = getStartDate();
-		startDateTxt.value = startDate.toISOString().substr(0,10)
-		let timeDiff = (TABegin - startDate) / day;
-		let years = Math.floor(timeDiff/365);
-
-		console.debug("TimeDiff between " + TABegin.toString() + " and " + startDate.toString() + ": "  + timeDiff + ".");
-
-		if (timeDiff < 0) {
-			// You started after the CA started
-			calcStartDate.setAttribute("datetime", startDate.toISOString().substr(0,10));
-			calcStartDate.innerHTML = startDate.toLocaleString("en-CA", { year: 'numeric', month: 'long', day: 'numeric' });
-
-			step = 1;
-		} else {
-			// You started after the CA started
-			calcStartDate.setAttribute("datetime", TABegin.toISOString().substr(0,10));
-			calcStartDate.innerHTML = TABegin.toLocaleString("en-CA", { year: 'numeric', month: 'long', day: 'numeric' });
-
-			var step = Math.ceil(years, salaries[levelSel.value].length-1) + 1;
-		}
-		console.debug("Your step would be " + step + ".");
-		if (step > salaries[levelSel.value].length) step = salaries[levelSel.value].length;
-		console.debug("But there ain't that many steps.  so you're step " + step +".");
-
-		stepSel.selectedIndex=step;
-		//step = Math.min(years, salaries[levelSel.value].length);
-
-		/*
-		var opts = stepSel.getElementsByTagName("option");
-		for (var i = 0; i < opts.length; i++) {
-			if (opts[i].hasAttribute("selected")) opts[i].removeAttribute("selected");
-			if (i == step) opts[i].setAttribute("selected", "selected");
-		}
-		*/
-
+function guessStepByStartDate () {
+	let startDate = getStartDate();
+	if ( isNaN(startDate.getTime()) ) {
+		console.error("guessStepByStartDate:: Start date isn't a valid date?", startDate);
+		return;
 	}
-} // End of selectSalary
+	if (isNaN(level) || level < 0 || level > data.chosenCA().levels) {
+		console.error("guessStepByStartDate:: Level not selected yet", level);
+		return;
+	}
+
+	// To get here you must have a valid date and a valid level
+	let timeDiff = (data.chosenCA().startDate - startDate) / day;
+	let years = Math.floor(timeDiff/365);
+
+	console.debug(`guessStepByStartDate:: TimeDiff between ${data.chosenCA().startDate.toString()} and ${startDate.toString()}: ${timeDiff}`);
+
+	step = 0;
+	let calcStartDate = document.getElementById("calcStartDate");
+	if (timeDiff < 0) { // You started after the CA started
+		calcStartDate.setAttribute("datetime", data.chosenCA().startDate.toISOString().substr(0, 10));
+		calcStartDate.innerHTML = startDate.toLocaleString("en-CA", {year: 'numeric', month: 'long', day: 'numeric'});
+
+		step = 1;
+	} else { // You started before the CA started
+		calcStartDate.setAttribute("datetime", data.chosenCA().startDate.toISOString().substr(0, 10));
+		calcStartDate.innerHTML = data.chosenCA().startDate.toLocaleString("en-CA", {year: 'numeric', month: 'long', day: 'numeric'});
+
+		// Ensuring the calculated step does not exceed the number of available steps
+		step = Math.min(step+years, data.chosenCA().salaries[level].length);
+	}
+
+	document.getElementById("stepSelect").selectedIndex=step+1;
+} // End of guessStepByStartDate
 
 
 function getStartDate() {
@@ -821,18 +819,6 @@ function getSalary () {
 		console.debug("getSalary::Got valid date, now trying to figure out salary.", startDate);
 		let timeDiff = (CA.startDate - startDate) / day;
 		console.debug("getSalary:: Step is:", step)
-		// --- Don't think we need any of this since step is defined globally as soon as the Step selector is changed ---
-		// if (stepSel.value && stepSel.value >= 0 && stepSel.value < salaries[level].length) {
-		// 	step = stepSel.value;
-		// 	console.debug("getSalary::Got step from the stepSel.  And it's " + step + ".");
-		// } else {
-		// 	console.debug("getSalary::Couldn't get step from the stepSel. Gotta guess. stepSel.value: " + stepSel.value + ".");
-		// 	console.debug("getSalary::TimeDiff: "  + timeDiff + ".");
-		//
-		// 	let years = Math.floor(timeDiff/365);
-		// 	step = Math.min(years, salaries[level].length-1);
-		// 	console.debug("getSalary::Your step would be " + step + ".");
-		// }
 
 		// TODO: Figure out later if it makes sense to just insert actual date objects here
 		saveValues.push({step:step});
@@ -1132,9 +1118,9 @@ function addPeriod (p) {
 	}
 	if (p["reason"] == "Anniversary Increase" && dbug) {
 		if (looking) {
-			console.log ("addPeriod::Gonna start looking for the place to insert this anniversary increase.")
+			console.log("addPeriod::Gonna start looking for the place to insert this anniversary increase.")
 		} else {
-			console.log ("addPeriod::Would look for the anniversary but looking is false.");
+			console.log("addPeriod::Would look for the anniversary but looking is false.");
 		}
 	}
 	for (var i = 1; i < periods.length && looking; i++) {
@@ -2019,20 +2005,32 @@ function setupEventListeners() {
         populateCASelect();
     }, false);
 
-    let CASel = document.getElementById("CASelect");
+	let CASel = document.getElementById("CASelect");
     CASel.addEventListener("change", function () {
         chosenCA = CASel.value;
         resetSelectors("CASel");
         populateLevelSelect();
-        generateTables(data.chosenCA());
+
+		const levelStartDate = document.getElementById("levelStartDate");
+		levelStartDate.setAttribute("datetime", data.chosenCA().startDate.toISOString().substr(0,10));
+		levelStartDate.innerHTML = data.chosenCA().startDate.toLocaleString("en-CA", { year: 'numeric', month: 'long', day: 'numeric' });
+		const calcStartDate = document.getElementById("calcStartDate");
+		calcStartDate.setAttribute("datetime", data.chosenCA().startDate.toISOString().substr(0,10));
+		calcStartDate.innerHTML = data.chosenCA().startDate.toLocaleString("en-CA", { year: 'numeric', month: 'long', day: 'numeric' });
+
+        generateTables(data.chosenCA()); // TODO: Delete old tables when CA changes
     }, false);
 
+	// TODO: If the level changes we want to change the options in the Step selector, but we also want to keep the date
     let levelSel = document.getElementById("levelSelect");
     levelSel.addEventListener("change", function () {
         level = Number(levelSel.value);
         resetSelectors("levelSel");
-        populateStepSelect();
+        populateStepSelect(step); /* if a step has already been selected, try to use the same step */
     }, false);
+
+	// If the date changes we want to guess their current step
+	document.getElementById("startDateTxt").addEventListener("change", guessStepByStartDate, false);
 
     let stepSel = document.getElementById("stepSelect");
     stepSel.addEventListener("change", function () {
