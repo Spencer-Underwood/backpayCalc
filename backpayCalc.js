@@ -23,7 +23,7 @@ let lang = "en";
 var langFormat = "en-CA";
 var version = "3.0";
 var updateHash = true;
-var saveValues = null;
+var saveValues = null; // This can probably be replaced just by looking the values up at time of save
 var showExtraCols = true;
 
 const WeeksInYear = 52.176;
@@ -118,6 +118,12 @@ var newRates = {};
 //var days = [31, 29, 31
 
 // #endregion variables
+
+// Helper function to format a Date object to "YYYY-MM-DD".
+Date.prototype.toISODateString = function() {
+    return this.toISOString().split('T')[0];
+};
+
 function oldinit () {
 	console.debug("Initting");
 	//saveValues = new Map();
@@ -132,11 +138,11 @@ function oldinit () {
 	endDateTxt = document.getElementById("endDateTxt");
 	//if (updateHash) startDateTxt.addEventListener("change", saveValue, false);
 	calcStartDate = document.getElementById("calcStartDate");
-	addPromotionBtn = document.getElementById("addPromotionBtn");
-	addActingBtn = document.getElementById("addActingBtn");
-	addOvertimeBtn = document.getElementById("addOvertimeBtn");
-	addLwopBtn = document.getElementById("addLwopBtn");
-	addLumpSumBtn = document.getElementById("addLumpSumBtn");
+	// addPromotionBtn = document.getElementById("addPromotionBtn");
+	// addActingBtn = document.getElementById("addActingBtn");
+	// addOvertimeBtn = document.getElementById("addOvertimeBtn");
+	// addLwopBtn = document.getElementById("addLwopBtn");
+	// addLumpSumBtn = document.getElementById("addLumpSumBtn");
 	resultsBody = document.getElementById("resultsBody");
 	resultsFoot = document.getElementById("resultsFoot");
 	resultsTheadTR = document.getElementById("resultsTheadTR");
@@ -740,19 +746,24 @@ function parseDateString(dateString) {
 
 function startProcess () {
 	// Reset the periods every time pay is calculated
-	data.chosenCA().calculatedPeriods = structuredClone(data.chosenCA().calculatedPeriods);
-	console.log(`startProcess:: Periods being used for "${group}" "${classification}" "${chosenCA}":`, data.chosenCA().calculatedPeriods);
+	periods = structuredClone(data.chosenCA().periods);
+	// data.chosenCA().calculatedPeriods = structuredClone(data.chosenCA().calculatedPeriods);
+	console.log(`startProcess:: Periods being used for "${group}" "${classification}" "${chosenCA}":`, periods);
 
 	saveValues = [];
 	lumpSumPeriods = {};
 	overtimePeriods = {};
+
+	let resultsBody = document.getElementById("resultsBody");
+	let resultsFoot = document.getElementById("resultsFoot");
+
 	if (resultsBody) { removeChildren (resultsBody); } else {
 		let resultsTable = document.getElementById("resultsTable");
-		resultsBody = createHTMLElement("tbody", {"parentNode":resultsTable, "id":"resultsBody"});
+		createHTMLElement("tbody", {"parentNode":resultsTable, "id":"resultsBody"});
 	}
 	if (resultsFoot) { removeChildren (resultsFoot); } else {
 		let resultsTable = document.getElementById("resultsTable");
-		resultsFoot = createHTMLElement("tfoot", {"parentNode":resultsTable, "id":"resultsFoot"});
+		createHTMLElement("tfoot", {"parentNode":resultsTable, "id":"resultsFoot"});
 	}
 
 	let errorDivs = document.querySelectorAll(".error");
@@ -771,6 +782,9 @@ function startProcess () {
 		}
 		errorDivs[i].parentNode.removeChild(errorDivs[i]);
 	}
+
+	// TODO: Validate Fields *before* calculations
+	// validateFields();
 
 	// get salary?
 	//dbug = true;
@@ -800,12 +814,13 @@ function startProcess () {
 // I don't get it.  What's the difference btween selectSalary and getSalary?
 // This ones starts: get the CS-0level, get the startDateText date, check for leapyear, set the startDateTxt value, figure out your step, select the step
 function getSalary () {
-	let saveValues =  [];
-	let levelSelect = document.getElementById("levelSelect");
+	// TODO: Add error handling. Start Date < End Date, CA / Level / Step all selected
 	let CA = data.chosenCA();
+	let levelSelect = document.getElementById("levelSelect");
 
+	// TODO: Move this to centralized field validation
 	console.debug("getSalary:: Starting level is:", level); // and start date of " + startDate + ".");
-	if (level < 0 || level > data.chosenCA().levels) {	// Should only happen if someone messes with the querystring
+	if (level < 0 || level >= CA.levels) {	// Should only happen if someone messes with the querystring
 		console.error("getSalary::Error: level is out of bounds.");
 		let errDiv = createHTMLElement("div", {"parentNode":levelSelect.parentNode, "id":"levelSelectError", "class":"error"});
 		createHTMLElement("span", {"parentNode":errDiv, "nodeText":"Please select a level"});
@@ -814,55 +829,59 @@ function getSalary () {
 		//return; //TODO: cancel processing if level is out of bounds
 	} else { saveValues.push("level="+level); }
 
+	let endDateText = document.getElementById("endDateTxt").value;
+	let endDate = parseDateString(endDateText);
 	let startDate = getStartDate();
-	if (level != null && startDate) {
+	if (level != null && startDate && endDate) {
 		console.debug("getSalary::Got valid date, now trying to figure out salary.", startDate);
 		let timeDiff = (CA.startDate - startDate) / day;
 		console.debug("getSalary:: Step is:", step)
 
-		// TODO: Figure out later if it makes sense to just insert actual date objects here
+		// TODO: Figure out later if it makes sense to just insert actual date objects here. Later: It does not
 		saveValues.push({step:step});
-		saveValues.push({startDate: CA.startDate});
-		saveValues.push({endDate: CA.endDate});
+		saveValues.push({startDate: startDate});
+		saveValues.push({endDate: endDate});
 
 		//This used to be below adding anniversaries, but some anniversaries were being missed
-		console.debug("getSalary::About to set EndDate to:", CA.endDate);
-		addPeriod ({"startDate" : EndDate.toISOString().substr(0, 10), "increase":0, "reason":"end", "multiplier" : 1});
+		console.debug("getSalary::About to set endDate to:", endDate);
+		addPeriod ({"date" : endDate.toISOString().substr(0, 10), "type":"End"});
 
-		//add anniversarys
+		//add anniversary's
 		//dbug = true;
-		let startYear = Math.max(2018, startDate.getFullYear());
-		console.debug("getSalary::Going to set anniversary dates betwixt: " + startYear + " and " + EndDate.getFullYear() + ".");
-		for (var i = startYear; i <=EndDate.getFullYear(); i++) {
-			if (stp < salaries[level].length) {
-				let dateToAdd = i + "-" + ((startDate.getMonth()+1) > 9 ? "" : "0") + (startDate.getMonth()+1)	+ "-" + (startDate.getDate() > 9 ? "" : "0") +  startDate.getDate();
-				console.debug("getSalary::Going to set anniversary date " + dateToAdd + ".");
-				if (dateToAdd > startDate.toISOString().substr(0,10)) {
-					console.debug("getSalary::Going to add anniversary on " + dateToAdd + " because it's past " + startDate.toISOString().substr(0,10) + ".");
-					addPeriod ({"startDate": dateToAdd, "increase":0, "reason":"Anniversary Increase", "multiplier":1});
+		let startYear = Math.max(CA.startDate.getFullYear(), startDate.getFullYear());
+		let stp = step;
+		console.debug("getSalary::Going to set anniversary dates betwixt: " + startYear + " and " + endDate.getFullYear() + ".");
+		for (let i = startYear; i <=endDate.getFullYear(); i++) {
+			if (stp <= CA.salaries[level].length) {
+				let anniversaryDate = new Date(i, startDate.getMonth(), startDate.getDate() );
+				console.debug("getSalary::Going to set anniversary date " + anniversaryDate + ".");
+				if (anniversaryDate > startDate) {
+					console.debug("getSalary::Going to add anniversary on " + anniversaryDate + " because it's past " + startDate.toISODateString() + ".");
+					addPeriod ({"date": anniversaryDate.toISODateString(), "type":"Anniversary Increase"});
 					stp++;
 				} else {
-					console.debug("getSalary::Not going to add anniversary on " + dateToAdd + " because it's too early.");
+					console.debug("getSalary::Not going to add anniversary on " + anniversaryDate + " because it's too early.");
 				}
 			}
 		}
 		//dbug = false;
 		if (timeDiff < 0) {
 			console.debug("getSalary::You weren't even there then.");
+			// TODO: consider what to do with pre-start work periods
 			// remove all older periods?? Maybe?  Or just somehow make them 0s?
-			// This one makes the mulitpliers 0.
-			addPeriod ({"startDate" : startDate.toISOString().substr(0,10), "increase":0, "reason":"Starting", "multiplier":1});
-			for (var i = 0; i < periods.length; i++) {
-				if (startDate.toISOString().substr(0,10) > periods[i]["startDate"]) periods[i]["multiplier"] = 0;
+			// This one makes the multipliers 0.
+			addPeriod ({"date" : startDate.toISODateString(), "type":"Starting"});
+			for (let i = 0; i < periods.length; i++) {
+				if (startDate.toISODateString() > periods[i]["date"]){ periods[i]["multiplier"] = 0; }
 			}
 			
 			// This one removes the ones before start date.
 			// This _sounds_ good, but it totally messes up the compounding raises later.
 			/*
-			addPeriod ({"startDate" : startDate.toISOString().substr(0,10), "increase":0, "reason":"Starting", "multiplier":1});
+			addPeriod ({"startDate" : startDate.toISOString().substr(0,10), "increase":0, "type":"Starting", "multiplier":1});
 			do {
 				periods.shift();
-			} while (periods[0]["startDate"] <= startDate.toISOString().substr(0,10) && periods[0]["reason"] != "Starting");
+			} while (periods[0]["startDate"] <= startDate.toISOString().substr(0,10) && periods[0]["type"] != "Starting");
 			*/
 			//for (var i = periods.length-1; i >=0; i--)
 			/*
@@ -876,8 +895,8 @@ function getSalary () {
 		}
 		if (dbug) {
 			console.log("getSalary::pre-calc checks:");
-			for (var i = 0; i < periods.length; i++) {
-				console.log ("getSalary::" + periods[i]["reason"] + ": " + periods[i]["startDate"] + ".");
+			for (let i = 0; i < periods.length; i++) {
+				console.log (`getSalary::${periods[i]["type"]}: ${periods[i]["date"]}`);
 			}
 		}
 
@@ -885,6 +904,7 @@ function getSalary () {
 		console.debug("getSalary::Something's not valid.  Lvl: " + level + ", startDate: " + startDate + ".");
 		addStartDateErrorMessage();
 	}
+	console.log("breakpoint");
 } // End of getSalary
 
 function addPromotions () {
@@ -901,10 +921,10 @@ function addPromotions () {
 			if (promoDate[0] > TABegin.toISOString().substr(0,10) && promoDate[0] < EndDate.toISOString().substr(0, 10) && promoLevel > 0 && promoLevel <=5) {
 				console.debug("addPromotions::Adding a promotion on " + promoDate[0] + " at level " + promoLevel +".");
 				// add the promo period
-				var j = addPeriod ({"startDate":promoDate[0],"increase":0, "reason":"promotion", "multiplier":1, "level":(promoLevel-1)});
+				var j = addPeriod ({"startDate":promoDate[0],"increase":0, "type":"promotion", "multiplier":1, "level":(promoLevel-1)});
 				// remove future anniversaries
 				for (var k = j; k < periods.length; k++) {
-					if (periods[k]["reason"] == "Anniversary Increase") {
+					if (periods[k]["type"] == "Anniversary Increase") {
 						periods.splice(k, 1);
 					}
 				}
@@ -913,7 +933,7 @@ function addPromotions () {
 				console.debug("addPromotions::Starting with promo anniversaries k: " + k + ", and make sure it's <= " + EndDate.getFullYear() + ".");
 				for (k; k <= EndDate.getFullYear(); k++) {
 					console.debug("addPromotions::Adding anniversary date " + k + "-" + promoDate[2] + "-" + promoDate[3] + ".");
-					addPeriod ({"startDate": k + "-" + promoDate[2] + "-" + promoDate[3], "increase":0, "reason":"Anniversary Increase", "multiplier":1});
+					addPeriod ({"startDate": k + "-" + promoDate[2] + "-" + promoDate[3], "increase":0, "type":"Anniversary Increase", "multiplier":1});
 				}
 				saveValues.push("pdate" + i + "=" + promoDate[0]);
 				saveValues.push("plvl" + i + "=" + promoLevel);
@@ -949,19 +969,19 @@ function getActings () {
 				if (actingFromDate < TABegin.toISOString().substr(0,10) && actingToDate >= TABegin.toISOString().substr(0,10)) actingFromDate = TABegin.toISOString().substr(0,10);
 				console.debug("getActings::And the dates are in the right range.");
 				// add a period for starting
-				var from = addPeriod({"startDate":actingFromDate, "increase":0, "reason":"Acting Start", "multiplier":1, "level":(actingLvl-1)});
+				var from = addPeriod({"startDate":actingFromDate, "increase":0, "type":"Acting Start", "multiplier":1, "level":(actingLvl-1)});
 
 				// add a period for returning
 				var toParts = actingToDate.match(/(\d\d\d\d)-(\d\d)-(\d\d)/);
 				actingToDate = new Date(toParts[1], (toParts[2]-1), toParts[3]);
 				actingToDate.setDate(actingToDate.getDate() + parseInt(1));
-				var to = addPeriod({"startDate":actingToDate.toISOString().substr(0, 10), "increase":0, "reason":"Acting Finished", "multiplier":1});
+				var to = addPeriod({"startDate":actingToDate.toISOString().substr(0, 10), "increase":0, "type":"Acting Finished", "multiplier":1});
 				var fromParts = actingFromDate.match(/(\d\d\d\d)-(\d\d)-(\d\d)/);
 				actingFromDate = new Date(fromParts[1], (fromParts[2]-1), fromParts[3]);
 				
 				for (var j = parseInt(fromParts[1])+1; j < toParts[1]; j++) {
 					if (j + "-" + fromParts[2] + "-" + fromParts[3] < actingToDate.toISOString().substr(0, 10)) {
-						addPeriod({"startDate":j + "-" + fromParts[2] + "-" + fromParts[3], "increase":0, "reason":"Acting Anniversary", "multiplier":1});
+						addPeriod({"startDate":j + "-" + fromParts[2] + "-" + fromParts[3], "increase":0, "type":"Acting Anniversary", "multiplier":1});
 					}
 				}
 				saveValues.push("afrom" + i + "=" + actingFromDate.toISOString().substr(0, 10));
@@ -1004,13 +1024,13 @@ function getLWoPs () {
 				if (lwopFromDate <= EndDate.toISOString().substr(0, 10) && lwopToDate > EndDate.toISOString().substr(0, 10)) lwopToDate = EndDate.toISOString().substr(0, 10);
 				console.debug("getLWoPs::And the dates are in the right range.");
 				// add a period for starting
-				var from = addPeriod({"startDate":lwopFromDate, "increase":0, "reason":"LWoP Start", "multiplier":0});
+				var from = addPeriod({"startDate":lwopFromDate, "increase":0, "type":"LWoP Start", "multiplier":0});
 
 				// add a period for returning
 				var toParts = lwopToDate.match(/(\d\d\d\d)-(\d\d)-(\d\d)/);
 				lwopToDate = new Date(toParts[1], (toParts[2]-1), toParts[3]);
 				lwopToDate.setDate(lwopToDate.getDate() + parseInt(1));
-				var to = addPeriod({"startDate":lwopToDate.toISOString().substr(0, 10), "increase":0, "reason":"LWoP Finished", "multiplier":1});
+				var to = addPeriod({"startDate":lwopToDate.toISOString().substr(0, 10), "increase":0, "type":"LWoP Finished", "multiplier":1});
 				for (var j = from; j < to; j++) {
 					periods[j]["multiplier"] = 0;
 				}
@@ -1050,7 +1070,7 @@ function getOvertimes () {
 				console.debug("overtimes::And the dates are in the right range.");
 				// add a period for starting
 				
-				var from = addPeriod({"startDate":overtimeDate, "increase":0, "reason":"Overtime", "multiplier":0, "hours":overtimeAmount, "rate":overtimeRate});
+				var from = addPeriod({"startDate":overtimeDate, "increase":0, "type":"Overtime", "multiplier":0, "hours":overtimeAmount, "rate":overtimeRate});
 				saveValues.push("otdate" + i + "=" + overtimeDate);
 				saveValues.push("otamt" + i + "=" + overtimeAmount);
 				saveValues.push("otrt" + i + "=" + overtimeRate);
@@ -1083,7 +1103,7 @@ function getLumpSums () {
 			if (lumpSumDate >= TABegin.toISOString().substr(0,10) && lumpSumDate <= EndDate.toISOString().substr(0, 10) && lumpSumAmount > 0) {
 				console.debug("And the dates are in the right range.");
 				// add a period for starting
-				var from = addPeriod({"startDate":lumpSumDate, "increase":0, "reason":"Lump Sum", "multiplier":0, "hours":lumpSumAmount});
+				var from = addPeriod({"startDate":lumpSumDate, "increase":0, "type":"Lump Sum", "multiplier":0, "hours":lumpSumAmount});
 
 				saveValues.push("lsdate" + i + "=" + lumpSumDate);
 				saveValues.push("lsamt" + i + "=" + lumpSumAmount);
@@ -1104,86 +1124,97 @@ function getLumpSums () {
 } // End of getLumpSums
 
 function addPeriod (p) {
-	var rv = null;
-	console.debug("addPeriod::Gonna add period beginnging at " + p["startDate"] + " to periods (" + periods.length + ").");
-	if (p["reason"] == "end") periods.push(p);
-	if (p.startDate < periods[0]["startDate"]) return;
-	var looking = true;
-	if (p["startDate"] == periods[0]["startDate"]) {
-		if (p["reason"] == "Anniversary Increase") {
-			periods[0]["reason"] += " & " + p["reason"];
+	let rv = null;
+	if (p["type"] === "End") {
+		console.log(`addPeriod:: Adding end period (${p.date}) to end of periods (${periods.length}).`);
+		periods.push(p);
+		return;
+	}
+	if (p.startDate instanceof Date) {
+		console.debug(`addPeriod:: startDate (${p.date}) was Date object, converting to string`);
+		p.startDate = p.startDate.toISOString();
+	}
+	if (p.startDate < periods[0]["date"]) {
+		console.error(`addPeriod:: Period with a starting date of ${p.date} is before the starting date ${periods[0]["date"]}!`)
+		return;
+	}
+
+	console.debug(`addPeriod:: Gonna add period beginning at ${p["date"]} to periods ${periods.length}.`);
+	let looking = true;
+	if (p["date"] === periods[0]["date"]) {
+		if (p["type"] === "Anniversary Increase") {
+			periods[0]["type"] += " & " + p["type"];
 			looking = false;
 			console.debug("addPeriod::Not gonna add this period because the anniversary date is the same as the first date of the CA.");
 		}
 	}
-	if (p["reason"] == "Anniversary Increase" && dbug) {
-		if (looking) {
-			console.log("addPeriod::Gonna start looking for the place to insert this anniversary increase.")
-		} else {
-			console.log("addPeriod::Would look for the anniversary but looking is false.");
-		}
+	if (p["type"] === "Anniversary Increase") {
+		if (looking) { console.debug("addPeriod:: Gonna start looking for the place to insert this anniversary increase.") }
+		else { console.debug("addPeriod:: Would look for the anniversary but looking is false."); }
 	}
-	for (var i = 1; i < periods.length && looking; i++) {
-		//if (/*p["reason"] == "Anniversary Increase" && */dbug) console.log ("addPeriod::["+i+"]Is p[startDate](" + p["startDate"] + ") before periods["+i+"][startDate](" + periods[i]["startDate"] + ")?");
-		if (p["startDate"] < periods[i]["startDate"]) {
-			if (/*p["reason"] == "Anniversary Increase" && */dbug) console.log ("addPeriod::["+i+"]It is!");
-			if (p["reason"] == "Lump Sum") {
-				if (lumpSumPeriods.hasOwnProperty(periods["startDate"])) {
-					lumpSumPeriods[periods[i-1]["startDate"]] += p["hours"];
-					console.debug("Adding lump sum amount to " + periods[i-1]["startDate"] + " of " +p["hours"] + ".");
+	for (let i = 1; i < periods.length && looking; i++) {
+		if (p["date"] < periods[i]["date"]) {
+			console.debug(`addPeriod:: [${i}] it is!`);
+			if (p["type"] === "Lump Sum") {
+				if (lumpSumPeriods.hasOwnProperty(periods["date"])) {
+					lumpSumPeriods[periods[i - 1]["date"]] += p["hours"];
+					console.debug("Adding lump sum amount to " + periods[i - 1]["date"] + " of " + p["hours"] + ".");
 				} else {
-					lumpSumPeriods[periods[i-1]["startDate"]] = p["hours"];
-					console.debug("Adding lump sum amount for " + periods[i-1]["startDate"] + " of " +p["hours"] + ".");
+					lumpSumPeriods[periods[i - 1]["date"]] = p["hours"];
+					console.debug("Adding lump sum amount for " + periods[i - 1]["date"] + " of " + p["hours"] + ".");
 				}
 				looking = false;
-			} else if (p["reason"] == "Overtime") {
+			} else if (p["type"] === "Overtime") {
 				//dbug = true;
-				console.debug("Does overtimePeriods have anything in " + periods[i-1]["startDate"] + "?");
-				if (overtimePeriods.hasOwnProperty(periods[i-1]["startDate"])) {
+				console.debug("Does overtimePeriods have anything in " + periods[i - 1]["date"] + "?");
+				if (overtimePeriods.hasOwnProperty(periods[i - 1]["date"])) {
 					console.debug("Yes.  But does it have anything in rate: " + p["rate"] + "?");
-					if (overtimePeriods[periods[i-1]["startDate"]].hasOwnProperty(p["rate"])) {
-						if (dbug) console.log("Yup.  So gonna add " + periods[i-1]["startDate"][p["rate"]] + " to " + p["hours"] +".");
-						overtimePeriods[periods[i-1]["startDate"]][p["rate"]] = (overtimePeriods[periods[i-1]["startDate"]][p["rate"]]*1) + (p["hours"]*1);
-						console.debug("Adding overtime amount to " + periods[i-1]["startDate"] + " of " +p["hours"] + " x " + p["rate"] + ".");
-						console.debug("And it came to " + overtimePeriods[periods[i-1]["startDate"]][p["rate"]] +".");
+					if (overtimePeriods[periods[i - 1]["date"]].hasOwnProperty(p["rate"])) {
+						if (dbug) console.log("Yup.  So gonna add " + periods[i - 1]["date"][p["rate"]] + " to " + p["hours"] + ".");
+						overtimePeriods[periods[i - 1]["date"]][p["rate"]] = (overtimePeriods[periods[i - 1]["date"]][p["rate"]] * 1) + (p["hours"] * 1);
+						console.debug("Adding overtime amount to " + periods[i - 1]["date"] + " of " + p["hours"] + " x " + p["rate"] + ".");
+						console.debug("And it came to " + overtimePeriods[periods[i - 1]["date"]][p["rate"]] + ".");
 					} else {
-						console.debug("No, so gonna set amount " + p["hours"] + " to " + periods[i-1]["startDate"][p["rate"]] + ".");
-						overtimePeriods[periods[i-1]["startDate"]][p["rate"]] = p["hours"];
-						console.debug("Adding overtime amount for " + periods[i-1]["startDate"] + " of " +p["hours"] + " x " + p["rate"] + " to equal " + overtimePeriods[periods[i-1]["startDate"]][p["rate"]] + " which should be " + p["hours"] + ".");
+						console.debug("No, so gonna set amount " + p["hours"] + " to " + periods[i - 1]["date"][p["rate"]] + ".");
+						overtimePeriods[periods[i - 1]["date"]][p["rate"]] = p["hours"];
+						console.debug("Adding overtime amount for " + periods[i - 1]["date"] + " of " + p["hours"] + " x " + p["rate"] + " to equal " + overtimePeriods[periods[i - 1]["date"]][p["rate"]] + " which should be " + p["hours"] + ".");
 					}
 				} else {
 					console.debug("No.  So gonna add one.");
-					if (dbug) console.log("addPeriod::p[rate]: " + p["rate"] + ".");
-					if (dbug) console.log("addPeriod::p[hours]: " + p["hours"] + ".");
-					overtimePeriods[periods[i-1]["startDate"]] = {};
-					overtimePeriods[periods[i-1]["startDate"]][p["rate"]] = p["hours"];
-					if (dbug) console.log("addPeriod::Now in " + periods[i-1]["startDate"] + " at rate of " + p["rate"] + ": " + overtimePeriods[periods[i-1]["startDate"]][p["rate"]] + ".");
+					console.debug("addPeriod::p[rate]: " + p["rate"] + ".");
+					console.debug("addPeriod::p[hours]: " + p["hours"] + ".");
+					overtimePeriods[periods[i - 1]["date"]] = {};
+					overtimePeriods[periods[i - 1]["date"]][p["rate"]] = p["hours"];
+					console.debug("addPeriod::Now in " + periods[i - 1]["date"] + " at rate of " + p["rate"] + ": " + overtimePeriods[periods[i - 1]["date"]][p["rate"]] + ".");
 				}
 				looking = false;
 				//dbug = false;
 			} else {
-				if (p["reason"] == "Anniversary Increase" && dbug) console.log ("addPeriod::Adding anniversary increase.");
+				// Handles everything but overtime and OT?
+				console.debug(`addPeriod:: Adding period for type "${p["type"]}" from: ${p["date"]}.`);
 				periods.splice(i, 0, p);
 				rv = i;
 				looking = false;
-				if (p["reason"]=="end") {
-					periods.splice(i+1); 
-					rv = periods.length-1;
+				if (p["type"] === "End") {
+					console.error(`addPeriod:: invalid state, type == end should've been caught earlier`)
+					periods.splice(i + 1);
+					rv = periods.length - 1;
 				}
 			}
-		} else if (p["startDate"] == periods[i]["startDate"]) {
-			if (/*p["reason"] == "Anniversary Increase" && */dbug) console.log ("addPeriod::["+i+"]It's the same date!");
-			if (p["reason"] == "Phoenix") {
-				periods[i]["reason"] += " & Phoenix";
+		}
+		else if (p["date"] === periods[i]["date"]) {
+			console.debug("addPeriod::["+i+"] Period date matches starting date!");
+			if (p["type"] === "Phoenix") {
+				periods[i]["type"] += " & Phoenix";
 				looking = false;
 				rv = i;
-			} else if (p["reason"] == "Anniversary Increase" && periods[i]["reason"].match(/Contractual/)) {
-				periods[i]["reason"] += " & Anniversary Increase";
+			} else if (p["type"] === "Anniversary Increase" && periods[i]["type"].match(/Contractual/)) {
+				periods[i]["type"] += " & Anniversary Increase";
 				looking = false;
 				rv = i;
 			}
 		} else {
-			//if (/*p["reason"] == "Anniversary Increase" && */dbug) console.log ("addPeriod::["+i+"]It's after.");
+			//if (/*p["type"] == "Anniversary Increase" && */dbug) console.log ("addPeriod::["+i+"]It's after.");
 		}
 	}
 	return rv;
@@ -1208,13 +1239,13 @@ function calculate() {
 		if (dbug) {
 			console.log("prelim checks:");
 			for (var i = 0; i < periods.length; i++) {
-				console.log (periods[i]["reason"] + ": " + periods[i]["startDate"] + ".");
+				console.log (periods[i]["type"] + ": " + periods[i]["date"] + ".");
 			}
 		}
 		for (var i = 0; i < periods.length-1; i++) {
 			if (dbug) console.log(i + ": " + periods[i]["startDate"] + ":");
-			console.debug(i + ": going between " + periods[i]["startDate"] + " and " + periods[i+1]["startDate"] + " for the reason of " + periods[i]["reason"] + ".");
-			if (periods[i]["reason"].match(/Anniversary Increase/)) {
+			console.debug(i + ": going between " + periods[i]["startDate"] + " and " + periods[i+1]["startDate"] + " for the type of " + periods[i]["type"] + ".");
+			if (periods[i]["type"].match(/Anniversary Increase/)) {
 				var output = "";
 				if (actingStack.length == 0) {
 					if (i ==0) {
@@ -1230,12 +1261,12 @@ function calculate() {
 					output += actingStack[0]["step"] + ".";
 				}
 				console.debug(output);
-			} else if (periods[i]["reason"] == "Acting Anniversary") {
+			} else if (periods[i]["type"] == "Acting Anniversary") {
 				var output = "Increasing step from " + step + " to ";
 				step = Math.min(step + 1, salaries[level].length-1);
 				output += step + "."
 				console.debug(output);
-			} else if (periods[i]["reason"] == "promotion") {
+			} else if (periods[i]["type"] == "promotion") {
 				var currentSal = salaries[level][step];
 				var minNewSal = currentSal * 1.04;
 				level = periods[i]["level"];
@@ -1246,7 +1277,7 @@ function calculate() {
 						looking = false;
 					}
 				}
-			} else if (periods[i]["reason"] == "Acting Start") {
+			} else if (periods[i]["type"] == "Acting Start") {
 				actingStack.push({"level":level, "step":step});
 				var currentSal = salaries[level][step];
 				var minNewSal = currentSal * 1.04;
@@ -1259,7 +1290,7 @@ function calculate() {
 					}
 				}
 
-			} else if (periods[i]["reason"] == "Acting Finished") {
+			} else if (periods[i]["type"] == "Acting Finished") {
 				var orig = actingStack.pop();
 				step = orig["step"];
 				level = orig["level"];
@@ -1312,7 +1343,7 @@ function calculate() {
 			let endDate = new Date(periods[i+1]["startDate"]);
 			endDate.setDate(endDate.getDate() -1);
 			var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": periods[i]["startDate"] + " - " + endDate.toISOString().substr(0,10)});
-			var reasonDiv = createHTMLElement("div", {"parentNode":newPaidTD, "textNode":"(" + periods[i]["reason"] + ")", "class":"small"});
+			var reasonDiv = createHTMLElement("div", {"parentNode":newPaidTD, "textNode":"(" + periods[i]["type"] + ")", "class":"small"});
 			var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(periods[i]["made"])}); //.toFixed(2)});
 			var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(periods[i]["shouldHaveMade"])}); //.toFixed(2)});
 			var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(periods[i]["backpay"])}); //.toFixed(2)});
