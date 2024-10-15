@@ -1028,35 +1028,34 @@ function getActings () {
 
 function getLWoPs () {
 	// Add lwops
-	var lwopStints = document.querySelectorAll(".lwopStints");
+	let lwopStints = document.querySelectorAll(".lwopStints");
+	let CA = data.chosenCA();
+	let endDate = parseDateString(document.getElementById("endDateTxt").value);
 	console.debug(`Dealing with ${lwopStints.length} lwops.`);
 	
-	for (var i =0; i < lwopStints.length; i++) {
-		var dates = lwopStints[i].getElementsByTagName("input");
-		var lwopFromDate = dates[0].value;
-		var lwopToDate = dates[1].value;
-		if (lwopFromDate.match(/\d\d\d\d-\d\d-\d\d/) && lwopToDate.match(/\d\d\d\d-\d\d-\d\d/)) {
-			console.debug("getLWoPs::Passed the initial tests for " + lwopFromDate + " to " + lwopToDate + ".");
-			if (lwopFromDate <= EndDate.toISODateString() && 
-					lwopToDate >= TABegin.toISODateString() && 
-					lwopToDate > lwopFromDate) {
-				if (lwopFromDate <= TABegin.toISODateString() && lwopToDate >= TABegin.toISODateString()) lwopFromDate = TABegin.toISODateString();
-				if (lwopFromDate <= EndDate.toISODateString() && lwopToDate > EndDate.toISODateString()) lwopToDate = EndDate.toISODateString();
+	for (let i =0; i < lwopStints.length; i++) {
+		let dates = lwopStints[i].getElementsByTagName("input");
+		let lwopFromDate = new Date(dates[0].value);
+		let lwopToDate = new Date(dates[1].value);
+		// TODO: Move this to a central field validation point?
+		if ( !isNaN(lwopFromDate.getTime()) && !isNaN(lwopToDate.getTime()) ) {
+			console.debug(`getLWoPs::Passed the initial tests for ${lwopFromDate} to ${lwopToDate}.`);
+			if (lwopFromDate <= endDate && lwopToDate >= CA.startDate && lwopToDate > lwopFromDate) {
+				if (lwopFromDate <= CA.startDate && lwopToDate >= CA.startDate) { lwopFromDate = CA.startDate;}
+				if (lwopFromDate <= endDate && lwopToDate > endDate) { lwopToDate = endDate; }
 				console.debug("getLWoPs::And the dates are in the right range.");
 				// add a period for starting
-				var from = addPeriod({"startDate":lwopFromDate, "increase":0, "type":"LWoP Start", "multiplier":0});
+				let from = addPeriod({"date":lwopFromDate.toISODateString(), "type":"LWoP Start", "multiplier":0});
 
 				// add a period for returning
-				var toParts = lwopToDate.match(/(\d\d\d\d)-(\d\d)-(\d\d)/);
-				lwopToDate = new Date(toParts[1], (toParts[2]-1), toParts[3]);
-				lwopToDate.setDate(lwopToDate.getDate() + parseInt(1));
-				var to = addPeriod({"startDate":lwopToDate.toISODateString(), "increase":0, "type":"LWoP Finished", "multiplier":1});
-				for (var j = from; j < to; j++) {
+				lwopToDate.setDate(lwopToDate.getDate() +1); // TODO: Verify this +1 day is required
+				let to = addPeriod({"date":lwopToDate.toISODateString(), "type":"LWoP Finished"});
+				for (let j = from; j < to; j++) {
 					periods[j]["multiplier"] = 0;
 				}
 
-				saveValues.push("lfrom" + i + "=" + lwopFromDate); //.toISODateString());
-				saveValues.push("lto" + i + "=" + lwopToDate.toISODateString());
+				saveValues.push(`lfrom${i}=${lwopFromDate.toISODateString()}`);
+				saveValues.push(`lto${i}=${lwopToDate.toISODateString()}`);
 				//var fromParts = lwopFromDate.match(/(\d\d\d\d)-(\d\d)-(\d\d)/);
 				//lwopFromDate = new Date(fromParts[1], (fromParts[2]-1), fromParts[3]);
 			} else {
