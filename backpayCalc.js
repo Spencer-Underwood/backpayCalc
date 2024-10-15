@@ -150,7 +150,7 @@ function oldinit () {
 	lastModTime = document.getElementById("lastModTime");
 
 	if (lastModTime) {
-		lastModTime.setAttribute("datetime", lastModified.toISOString().substr(0,10));
+		lastModTime.setAttribute("datetime", lastModified.toISODateString());
 		lastModTime.innerHTML = lastModified.toLocaleString("en-CA", { year: 'numeric', month: 'long', day: 'numeric' });
 	}
 	if (dbug || showExtraCols) {
@@ -288,7 +288,7 @@ function getStr (str) {
 		// 		if (repStr[2] == "startDate") {
 		// 			rv = rv.replace(repStr[1], calcStartDate.getAttribute("datetime"));
 		// 		} else if (repStr[2] == "endDate") {
-		// 			rv = rv.replace(repStr[1], EndDate.toISOString().substr(0,10));
+		// 			rv = rv.replace(repStr[1], EndDate.toISODateString());
 		// 		} else if (repStr[2] == "knownEndDate") {
 		// 			rv = rv.replace(repStr[1], knownEndDate);
 		// 		}
@@ -390,7 +390,7 @@ function generateTables(CA) {
         createHTMLElement("h3", { parentNode: newSummary, textNode: levelText });
 
         let yearSect = createHTMLElement("section", { parentNode: newSection, class: "yearSect" });
-        createHTMLElement("h4", { parentNode: yearSect, textNode: `${getStr("current")} (${CA.startDate.toISOString().slice(0, 10)})` });
+        createHTMLElement("h4", { parentNode: yearSect, textNode: `${getStr("current")} (${CA.startDate.toISODateString()})` });
         let respDiv = createHTMLElement("div", { parentNode: yearSect, class: "tables-responsive" });
 
         let newTable = createHTMLElement("table", { parentNode: respDiv, class: "table caption-top" });
@@ -703,12 +703,12 @@ function guessStepByStartDate () {
 	step = 0;
 	let calcStartDate = document.getElementById("calcStartDate");
 	if (timeDiff < 0) { // You started after the CA started
-		calcStartDate.setAttribute("datetime", data.chosenCA().startDate.toISOString().substr(0, 10));
+		calcStartDate.setAttribute("datetime", data.chosenCA().startDate.toISODateString());
 		calcStartDate.innerHTML = startDate.toLocaleString("en-CA", {year: 'numeric', month: 'long', day: 'numeric'});
 
 		step = 1;
 	} else { // You started before the CA started
-		calcStartDate.setAttribute("datetime", data.chosenCA().startDate.toISOString().substr(0, 10));
+		calcStartDate.setAttribute("datetime", data.chosenCA().startDate.toISODateString());
 		calcStartDate.innerHTML = data.chosenCA().startDate.toLocaleString("en-CA", {year: 'numeric', month: 'long', day: 'numeric'});
 
 		// Ensuring the calculated step does not exceed the number of available steps
@@ -844,7 +844,7 @@ function getSalary () {
 
 		//This used to be below adding anniversaries, but some anniversaries were being missed
 		console.debug("getSalary::About to set endDate to:", endDate);
-		addPeriod ({"date" : endDate.toISOString().substr(0, 10), "type":"End"});
+		addPeriod ({"date" : endDate.toISODateString(), "type":"End"});
 
 		//add anniversary's
 		//dbug = true;
@@ -878,10 +878,10 @@ function getSalary () {
 			// This one removes the ones before start date.
 			// This _sounds_ good, but it totally messes up the compounding raises later.
 			/*
-			addPeriod ({"startDate" : startDate.toISOString().substr(0,10), "increase":0, "type":"Starting", "multiplier":1});
+			addPeriod ({"startDate" : startDate.toISODateString(), "increase":0, "type":"Starting", "multiplier":1});
 			do {
 				periods.shift();
-			} while (periods[0]["startDate"] <= startDate.toISOString().substr(0,10) && periods[0]["type"] != "Starting");
+			} while (periods[0]["startDate"] <= startDate.toISODateString() && periods[0]["type"] != "Starting");
 			*/
 			//for (var i = periods.length-1; i >=0; i--)
 			/*
@@ -961,19 +961,25 @@ function addPromotions () {
 
 function getActings () {
 	// Add actings
-	var actingStints = document.querySelectorAll(".actingStints");
-	console.debug("getActings::Dealing with " + actingStints.length + " acting stints.");
+	let CA = data.chosenCA();
+	let endDate = parseDateString(document.getElementById("endDateTxt").value);
+	let actingStints = document.querySelectorAll(".actingStints");
+	console.debug(`getActings::Dealing with ${actingStints.length} acting stints.`);
 
-	for (var i =0; i < actings; i++) {
-		var actingLvl = actingStints[i].getElementsByTagName("select")[0].value;
-		var dates = actingStints[i].getElementsByTagName("input");
-		var actingFromDate = dates[0].value;
-		var actingToDate = dates[1].value;
-		console.debug("getActings::Checking acting at " + actingLvl + " from " + actingFromDate + " to " + actingToDate + ".");
+	for (let i =0; i < actings; i++) {
+		let actingLvl = actingStints[i].getElementsByTagName("select")[0].value;
+		let dates = actingStints[i].getElementsByTagName("input");
+		let actingFromDate = dates[0].value;
+		let actingToDate = dates[1].value;
+		console.debug(`getActings::Checking acting at ${actingLvl} from ${actingFromDate} to ${actingToDate}.`);
 		if (actingLvl >=0 && actingLvl <5 && actingFromDate.match(/\d\d\d\d-\d\d-\d\d/) && actingToDate.match(/\d\d\d\d-\d\d-\d\d/)) {
 			console.debug("getActings::Passed the initial tests.");
-			if (actingFromDate <= EndDate.toISOString().substr(0, 10) && actingToDate >= TABegin.toISOString().substr(0,10) && actingToDate > actingFromDate) {
-				if (actingFromDate < TABegin.toISOString().substr(0,10) && actingToDate >= TABegin.toISOString().substr(0,10)) actingFromDate = TABegin.toISOString().substr(0,10);
+			// TODO: Move to central verification block
+			if (actingFromDate <= endDate.toISODateString() && actingToDate >= CA.startDate.toISODateString() && actingToDate > actingFromDate) {
+				if (actingFromDate < CA.startDate.toISODateString() && actingToDate >= CA.startDate.toISODateString() )  {
+					actingFromDate = CA.startDate.toISODateString();
+					console.warn("")
+				}
 				console.debug("getActings::And the dates are in the right range.");
 				// add a period for starting
 				var from = addPeriod({"startDate":actingFromDate, "increase":0, "type":"Acting Start", "multiplier":1, "level":(actingLvl-1)});
@@ -982,23 +988,23 @@ function getActings () {
 				var toParts = actingToDate.match(/(\d\d\d\d)-(\d\d)-(\d\d)/);
 				actingToDate = new Date(toParts[1], (toParts[2]-1), toParts[3]);
 				actingToDate.setDate(actingToDate.getDate() + parseInt(1));
-				var to = addPeriod({"startDate":actingToDate.toISOString().substr(0, 10), "increase":0, "type":"Acting Finished", "multiplier":1});
+				var to = addPeriod({"startDate":actingToDate.toISODateString(), "increase":0, "type":"Acting Finished", "multiplier":1});
 				var fromParts = actingFromDate.match(/(\d\d\d\d)-(\d\d)-(\d\d)/);
 				actingFromDate = new Date(fromParts[1], (fromParts[2]-1), fromParts[3]);
 				
 				for (var j = parseInt(fromParts[1])+1; j < toParts[1]; j++) {
-					if (j + "-" + fromParts[2] + "-" + fromParts[3] < actingToDate.toISOString().substr(0, 10)) {
+					if (j + "-" + fromParts[2] + "-" + fromParts[3] < actingToDate.toISODateString()) {
 						addPeriod({"startDate":j + "-" + fromParts[2] + "-" + fromParts[3], "increase":0, "type":"Acting Anniversary", "multiplier":1});
 					}
 				}
-				saveValues.push("afrom" + i + "=" + actingFromDate.toISOString().substr(0, 10));
-				saveValues.push("ato" + i + "=" + actingToDate.toISOString().substr(0, 10));
+				saveValues.push("afrom" + i + "=" + actingFromDate.toISODateString());
+				saveValues.push("ato" + i + "=" + actingToDate.toISODateString());
 				saveValues.push("alvl" + i + "=" + actingLvl);
 			} else {
 				if (dbug) {
-					if (actingFromDate <= EndDate.toISOString().substr(0, 10)) console.log ("getActings::actingFrom is before EndDate");
-					if (actingToDate >= TABegin.toISOString().substr(0,10)) console.log ("getActings::actingTo is after startDate");
-					if (actingToDate <= EndDate.toISOString().substr(0, 10)) console.log ("getActings::actingTo is before EndDate");
+					if (actingFromDate <= endDate.toISODateString()) console.log ("getActings::actingFrom is before endDate");
+					if (actingToDate >= TABegin.toISODateString()) console.log ("getActings::actingTo is after startDate");
+					if (actingToDate <= endDate.toISODateString()) console.log ("getActings::actingTo is before endDate");
 					if (actingToDate > actingFromDate) console.log ("getActings::actingTo is after actingFrom");
 				}
 			}
@@ -1016,7 +1022,7 @@ function getActings () {
 function getLWoPs () {
 	// Add lwops
 	var lwopStints = document.querySelectorAll(".lwopStints");
-	console.debug("Dealing with " + lwopStints.length + " lwops.");
+	console.debug(`Dealing with ${lwopStints.length} lwops.`);
 	
 	for (var i =0; i < lwopStints.length; i++) {
 		var dates = lwopStints[i].getElementsByTagName("input");
@@ -1024,11 +1030,11 @@ function getLWoPs () {
 		var lwopToDate = dates[1].value;
 		if (lwopFromDate.match(/\d\d\d\d-\d\d-\d\d/) && lwopToDate.match(/\d\d\d\d-\d\d-\d\d/)) {
 			console.debug("getLWoPs::Passed the initial tests for " + lwopFromDate + " to " + lwopToDate + ".");
-			if (lwopFromDate <= EndDate.toISOString().substr(0, 10) && 
-					lwopToDate >= TABegin.toISOString().substr(0,10) && 
+			if (lwopFromDate <= EndDate.toISODateString() && 
+					lwopToDate >= TABegin.toISODateString() && 
 					lwopToDate > lwopFromDate) {
-				if (lwopFromDate <= TABegin.toISOString().substr(0, 10) && lwopToDate >= TABegin.toISOString().substr(0,10)) lwopFromDate = TABegin.toISOString().substr(0, 10);
-				if (lwopFromDate <= EndDate.toISOString().substr(0, 10) && lwopToDate > EndDate.toISOString().substr(0, 10)) lwopToDate = EndDate.toISOString().substr(0, 10);
+				if (lwopFromDate <= TABegin.toISODateString() && lwopToDate >= TABegin.toISODateString()) lwopFromDate = TABegin.toISODateString();
+				if (lwopFromDate <= EndDate.toISODateString() && lwopToDate > EndDate.toISODateString()) lwopToDate = EndDate.toISODateString();
 				console.debug("getLWoPs::And the dates are in the right range.");
 				// add a period for starting
 				var from = addPeriod({"startDate":lwopFromDate, "increase":0, "type":"LWoP Start", "multiplier":0});
@@ -1037,19 +1043,19 @@ function getLWoPs () {
 				var toParts = lwopToDate.match(/(\d\d\d\d)-(\d\d)-(\d\d)/);
 				lwopToDate = new Date(toParts[1], (toParts[2]-1), toParts[3]);
 				lwopToDate.setDate(lwopToDate.getDate() + parseInt(1));
-				var to = addPeriod({"startDate":lwopToDate.toISOString().substr(0, 10), "increase":0, "type":"LWoP Finished", "multiplier":1});
+				var to = addPeriod({"startDate":lwopToDate.toISODateString(), "increase":0, "type":"LWoP Finished", "multiplier":1});
 				for (var j = from; j < to; j++) {
 					periods[j]["multiplier"] = 0;
 				}
 
-				saveValues.push("lfrom" + i + "=" + lwopFromDate); //.toISOString().substr(0, 10));
-				saveValues.push("lto" + i + "=" + lwopToDate.toISOString().substr(0, 10));
+				saveValues.push("lfrom" + i + "=" + lwopFromDate); //.toISODateString());
+				saveValues.push("lto" + i + "=" + lwopToDate.toISODateString());
 				//var fromParts = lwopFromDate.match(/(\d\d\d\d)-(\d\d)-(\d\d)/);
 				//lwopFromDate = new Date(fromParts[1], (fromParts[2]-1), fromParts[3]);
 			} else {
 				if (dbug) {
-					if (lwopFromDate <= EndDate.toISOString().substr(0, 10)) console.log ("lwopFrom is before EndDate");
-					if (lwopToDate >= TABegin.toISOString().substr(0,10)) console.log ("lwopTo is after startDate");
+					if (lwopFromDate <= EndDate.toISODateString()) console.log ("lwopFrom is before EndDate");
+					if (lwopToDate >= TABegin.toISODateString()) console.log ("lwopTo is after startDate");
 					if (lwopToDate > lwopFromDate) console.log ("lwopTo is after lwopFrom");
 				}
 			}
@@ -1073,7 +1079,7 @@ function getOvertimes () {
 		var overtimeRate = overtimeStints[i].querySelector("select").value;
 		if (overtimeDate.match(/\d\d\d\d-\d\d-\d\d/)) {
 			console.debug("Passed the initial tests.");
-			if (overtimeDate >= TABegin.toISOString().substr(0,10) && overtimeDate <= EndDate.toISOString().substr(0, 10) && overtimeAmount > 0) {
+			if (overtimeDate >= TABegin.toISODateString() && overtimeDate <= EndDate.toISODateString() && overtimeAmount > 0) {
 				console.debug("overtimes::And the dates are in the right range.");
 				// add a period for starting
 				
@@ -1084,8 +1090,8 @@ function getOvertimes () {
 
 			} else {
 				if (dbug) {
-					if (overtimeDate >= TABegin.toISOString().substr(0,10)) console.log ("overtimeDate is after startDate");
-					if (overtimeDate <= EndDate.toISOString().substr(0, 10)) console.log ("overtimeDate is before EndDate");
+					if (overtimeDate >= TABegin.toISODateString()) console.log ("overtimeDate is after startDate");
+					if (overtimeDate <= EndDate.toISODateString()) console.log ("overtimeDate is before EndDate");
 					if (overtimeAmount > 0) console.log ("overtimeAmount > 0");
 				}
 			}
@@ -1107,7 +1113,7 @@ function getLumpSums () {
 		var lumpSumAmount = lumpsums[i].querySelector("input[type=text]").value.replace(/[^\d\.]/, "");
 		if (lumpSumDate.match(/\d\d\d\d-\d\d-\d\d/)) {
 			console.debug("Passed the initial tests.");
-			if (lumpSumDate >= TABegin.toISOString().substr(0,10) && lumpSumDate <= EndDate.toISOString().substr(0, 10) && lumpSumAmount > 0) {
+			if (lumpSumDate >= TABegin.toISODateString() && lumpSumDate <= EndDate.toISODateString() && lumpSumAmount > 0) {
 				console.debug("And the dates are in the right range.");
 				// add a period for starting
 				var from = addPeriod({"startDate":lumpSumDate, "increase":0, "type":"Lump Sum", "multiplier":0, "hours":lumpSumAmount});
@@ -1117,8 +1123,8 @@ function getLumpSums () {
 				
 			} else {
 				if (dbug) {
-					if (lumpSumDate >= TABegin.toISOString().substr(0,10)) console.log ("lumpSumDate is after startDate");
-					if (lumpSumDate <= EndDate.toISOString().substr(0, 10)) console.log ("lumpSumDate is before EndDate");
+					if (lumpSumDate >= TABegin.toISODateString()) console.log ("lumpSumDate is after startDate");
+					if (lumpSumDate <= EndDate.toISODateString()) console.log ("lumpSumDate is before EndDate");
 					if (lumpSumAmount > 0) console.log ("lumpSumAmount > 0");
 				}
 			}
@@ -1139,7 +1145,7 @@ function addPeriod (p) {
 	}
 	if (p.startDate instanceof Date) {
 		console.debug(`addPeriod:: startDate (${p.date}) was Date object, converting to string`);
-		p.startDate = p.startDate.toISOString();
+		p.startDate = p.startDate.toISODateString();
 	}
 	if (p.startDate < periods[0]["date"]) {
 		console.error(`addPeriod:: Period with a starting date of ${p.date} is before the starting date ${periods[0]["date"]}!`)
@@ -1349,7 +1355,7 @@ function calculate() {
 			var newTR = createHTMLElement("tr", {"parentNode":resultsBody});
 			let endDate = new Date(periods[i+1]["startDate"]);
 			endDate.setDate(endDate.getDate() -1);
-			var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": periods[i]["startDate"] + " - " + endDate.toISOString().substr(0,10)});
+			var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": periods[i]["startDate"] + " - " + endDate.toISODateString()});
 			var reasonDiv = createHTMLElement("div", {"parentNode":newPaidTD, "textNode":"(" + periods[i]["type"] + ")", "class":"small"});
 			var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(periods[i]["made"])}); //.toFixed(2)});
 			var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(periods[i]["shouldHaveMade"])}); //.toFixed(2)});
@@ -2050,10 +2056,10 @@ function setupEventListeners() {
         populateLevelSelect();
 
 		const levelStartDate = document.getElementById("levelStartDate");
-		levelStartDate.setAttribute("datetime", data.chosenCA().startDate.toISOString().substr(0,10));
+		levelStartDate.setAttribute("datetime", data.chosenCA().startDate.toISODateString());
 		levelStartDate.innerHTML = data.chosenCA().startDate.toLocaleString("en-CA", { year: 'numeric', month: 'long', day: 'numeric' });
 		const calcStartDate = document.getElementById("calcStartDate");
-		calcStartDate.setAttribute("datetime", data.chosenCA().startDate.toISOString().substr(0,10));
+		calcStartDate.setAttribute("datetime", data.chosenCA().startDate.toISODateString());
 		calcStartDate.innerHTML = data.chosenCA().startDate.toLocaleString("en-CA", { year: 'numeric', month: 'long', day: 'numeric' });
 
         generateTables(data.chosenCA()); // TODO: Delete old tables when CA changes
