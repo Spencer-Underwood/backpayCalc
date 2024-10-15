@@ -1060,15 +1060,15 @@ function getLWoPs () {
 				//lwopFromDate = new Date(fromParts[1], (fromParts[2]-1), fromParts[3]);
 			} else {
 				if (dbug) {
-					if (lwopFromDate <= EndDate.toISODateString()) console.log ("lwopFrom is before EndDate");
-					if (lwopToDate >= TABegin.toISODateString()) console.log ("lwopTo is after startDate");
+					if (lwopFromDate <= endDate) console.log ("lwopFrom is before EndDate");
+					if (lwopToDate >= CA.startDate) console.log ("lwopTo is after startDate");
 					if (lwopToDate > lwopFromDate) console.log ("lwopTo is after lwopFrom");
 				}
 			}
 		} else {
 			if (dbug) {
-				if (lwopFromDate.match(/\d\d\d\d-\d\d-\d\d/)) console.log ("getLWoPs::lwopFrom is right format.");
-				if (lwopToDate.match(/\d\d\d\d-\d\d-\d\d/)) console.log ("getLWoPs::lwopTo is right format.");
+				if ( !isNaN(lwopFromDate.getTime())) console.log ("getLWoPs::lwopFrom is right format.");
+				if ( !isNaN(lwopToDate.getTime())) console.log ("getLWoPs::lwopTo is right format.");
 			}
 		}
 	}
@@ -1076,34 +1076,37 @@ function getLWoPs () {
 	
 function getOvertimes () {
 	// Add Overtimes
-	var overtimeStints = document.querySelectorAll(".overtimes");
-	console.debug("overtimes::Dealing with " + overtimeStints.length + " overtimes.");
-	
-	for (var i =0; i < overtimeStints.length; i++) {
-		var overtimeDate = overtimeStints[i].querySelector("input[type=date]").value;
-		var overtimeAmount = overtimeStints[i].querySelector("input[type=text]").value.replace(/[^\d\.]/, "");
-		var overtimeRate = overtimeStints[i].querySelector("select").value;
-		if (overtimeDate.match(/\d\d\d\d-\d\d-\d\d/)) {
+	let CA = data.chosenCA();
+	let endDate = parseDateString(document.getElementById("endDateTxt").value);
+	let overtimeStints = document.querySelectorAll(".overtimes");
+
+	console.debug(`overtimes::Dealing with ${overtimeStints.length} overtimes.`);
+	for (let i =0; i < overtimeStints.length; i++) {
+		let overtimeDate = new Date(overtimeStints[i].querySelector("input[type=date]").value);
+		let overtimeAmount = overtimeStints[i].querySelector("input[type=text]").value.replace(/[^\d\.]/, "");
+		let overtimeRate = overtimeStints[i].querySelector("select").value;
+		// TODO: Move to centralized field validation?
+		if ( !isNaN(overtimeDate.getTime()) ) {
 			console.debug("Passed the initial tests.");
-			if (overtimeDate >= TABegin.toISODateString() && overtimeDate <= EndDate.toISODateString() && overtimeAmount > 0) {
+			if (overtimeDate >= CA.startDate && overtimeDate <= endDate && overtimeAmount > 0) {
 				console.debug("overtimes::And the dates are in the right range.");
 				// add a period for starting
 				
-				var from = addPeriod({"startDate":overtimeDate, "increase":0, "type":"Overtime", "multiplier":0, "hours":overtimeAmount, "rate":overtimeRate});
-				saveValues.push("otdate" + i + "=" + overtimeDate);
-				saveValues.push("otamt" + i + "=" + overtimeAmount);
-				saveValues.push("otrt" + i + "=" + overtimeRate);
+				addPeriod({"start":overtimeDate.toISODateString(), "type":"Overtime", "multiplier":0, "hours":overtimeAmount, "rate":overtimeRate});
+				saveValues.push(`otdate${i}=${overtimeDate}`);
+				saveValues.push(`otamt${i}=${overtimeAmount}`);
+				saveValues.push(`otrt${i}=${overtimeRate}`);
 
 			} else {
 				if (dbug) {
-					if (overtimeDate >= TABegin.toISODateString()) console.log ("overtimeDate is after startDate");
-					if (overtimeDate <= EndDate.toISODateString()) console.log ("overtimeDate is before EndDate");
+					if (overtimeDate >=  CA.startDate) console.log ("overtimeDate is after startDate");
+					if (overtimeDate <= endDate) console.log ("overtimeDate is before EndDate");
 					if (overtimeAmount > 0) console.log ("overtimeAmount > 0");
 				}
 			}
 		} else {
 			if (dbug) {
-				if (overtimeDate.match(/\d\d\d\d-\d\d-\d\d/)) console.log ("overtimeDate is right format.");
+				if (!isNaN(overtimeDate.getTime())) console.log ("overtimeDate is right format.");
 			}
 		}
 	}
