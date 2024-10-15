@@ -12,49 +12,22 @@
  *		* Being on lwop at beginning of contract
  *
  */
-
 import { data } from './raiseInfo.js';
 import { i18n } from './i18n.js';
-
 // #region variables
 // Global configuration variables
-var dbug = true;
+const dbug = true;
+const lastModified = new Date("2024-10-15");
 let lang = "en";
-var langFormat = "en-CA";
-var version = "3.0";
-var updateHash = true;
-var saveValues = null; // This can probably be replaced just by looking the values up at time of save
-var showExtraCols = true;
+let langFormat = "en-CA";
+let version = "3.0";
+let updateHash = true;
+let saveValues = null; // This can probably be replaced just by looking the values up at time of save
+let showExtraCols = true;
 
 const WeeksInYear = 52.176;
 const DaysInYear = 260.88;
-// I'm hoping this singleton makes it
-// const appData = (function() {
-//     let lang = null;
-// 	let group = null;
-//     let classification = null;
-//     let CA = null;
-// 	let level = -1;
-// 	let step = -1;
-//
-//     return { /* API calls */
-//         // Getters
-// 		getLang: function() { return lang },
-//         getGroup: function() { return group; },
-//         getClassification: function() { return classification; },
-//         getCA: function() { return CA;},
-// 		getLevel: function() { return level;},
-// 		getStep: function() { return step;},
-// 		getWeeksInYear: function() {return 52.176;},
-//         // Setters
-// 		setLang: function(newlang) { lang = newlang },
-//         setGroup: function(newGroup) { group = newGroup; },
-//         setClassification: function(newClassification) { classification = newClassification; },
-//         setCA: function(newCA) { CA = newCA; },
-// 		setLevel: function(newLevel) { level = newLevel; },
-// 		setStep: function(newStep) { step = newStep; },
-//     };
-// })();
+const day = (1000 * 60 * 60 * 24);
 
 // Collective Agreement variables
 let group = null;
@@ -64,58 +37,12 @@ let CA = null;
 let level = -1;
 let step = -1;
 
-// Helper function to skip directly to CA when group / class / CA are defined.
-data.chosenCA = function() {
-    return this[group][classification][chosenCA];
-};
-
 
 let periods = [];
 let lumpSumPeriods = {};
 let overtimePeriods = {};
 
 
-//let levelSel = document.getElementById("levelSelect");
-//var stepSel = document.getElementById("stepSelect");
-// Form elements
-let mainForm = document.getElementById("mainForm");
-let lastModTime = document.getElementById("lastModTime");
-let startDateTxt = document.getElementById("startDateTxt");
-let resultStatus = document.getElementById("resultStatus");
-let calcStartDate = document.getElementById("calcStartDate");
-let endDateTxt = document.getElementById("endDateTxt");
-// Buttons
-// var addPromotionBtn = document.getElementById("addPromotionBtn");
-// var addActingBtn = document.getElementById("addActingBtn");
-// var addOvertimeBtn = document.getElementById("addOvertimeBtn");
-// var addLwopBtn = document.getElementById("addLwopBtn");
-// var addLumpSumBtn = document.getElementById("addLumpSumBtn");
-// Result elements
-
-// Maths Stuff ?
-var TABegin = new Date("2021", "11", "22");		// Remember months:  0 == Janaury, 1 == Feb, etc.
-var EndDate = new Date("2024", "02", "17");		// This is the day after this should stop calculating; same as endDateTxt.value in the HTML
-var day = (1000 * 60 * 60 * 24);
-
-
-
-var parts = [];
-
-
-
-var initPeriods = [];
-//var promotions = 0;
-var actings = 0;
-var lumpSums = 0;
-var overtimes = 0;
-var lwops = 0;
-var lastModified = new Date("2023", "09", "22");
-
-//var salaries = [];
-var hourly = [];
-// var newRates = {};
-
-//var days = [31, 29, 31
 
 // #endregion variables
 
@@ -480,6 +407,9 @@ function getNum(num) {
 
 // Check the document location for saved things
 function handleHash () {
+	let startDateTxt = document.getElementById("startDateTxt");
+	let endDateTxt = document.getElementById("endDateTxt");
+
 	let hasHash = false;
 	let thisURL = new URL(document.location);
 	let params = thisURL.searchParams;
@@ -667,13 +597,11 @@ function setURL () {
 
 } // End of setURL
 
-
-
-
 /*
    Populates the Salary Select basedon the CS-0x level selected
 */
 function populateSalary () {
+	let startDateTxt = document.getElementById("startDateTxt");
 	removeChildren(stepSel);
 	if (levelSel.value >0 && levelSel.value <= 5) {
 		createHTMLElement("option", {"parentNode":stepSel, "value":"-1", "textNode":"Select Salary"});
@@ -681,12 +609,12 @@ function populateSalary () {
 			createHTMLElement("option", {"parentNode":stepSel, "value":i, "textNode":"$" + salaries[levelSel.value-1][i].toLocaleString()});
 		}
 	}
-	if (startDateTxt.value.replace(/[^-\d]/, "").match(/(\d\d\d\d)-(\d\d)-(\d\d)/)) selectSalary();
+	// TODO: Replace this with reference to new guess step by date function
+	// if (startDateTxt.value.replace(/[^-\d]/, "").match(/(\d\d\d\d)-(\d\d)-(\d\d)/)) { selectSalary() };
 } // End of populateSalary
 
 // Once a CS-level and startDate have been selected, select the most likely salary from the dropdown
 // Called from init when startDateTxt has changed, and from populateSalary if startDateTxt is a date (####-##-##)
-
 function guessStepByStartDate () {
 	let startDate = getStartDate();
 	if ( isNaN(startDate.getTime()) ) {
@@ -721,7 +649,6 @@ function guessStepByStartDate () {
 
 	document.getElementById("stepSelect").selectedIndex=step+1;
 } // End of guessStepByStartDate
-
 
 function getStartDate() {
 	let startDateTxt = document.getElementById("startDateTxt").value.replace(/[^-\d]/g, "");
@@ -821,6 +748,7 @@ function startProcess () {
 	setURL();
 	calculate();
 
+	console.log("breakpoint");
 } // End of startProcess
 
 // getSalary called during startProcess.  "guess" isn't really a good word for this, so I changed it to "get"
@@ -945,8 +873,8 @@ function addPromotions () {
 				// TODO: Consider extracting anniversaries into another function, it's used in multiple places
 				// add anniversaries
 				let k = promotionDate.getFullYear()+1;
-				console.debug("addPromotions::Starting with promo anniversaries k: " + k + ", and make sure it's <= " + EndDate.getFullYear() + ".");
-				for (k; k <= EndDate.getFullYear(); k++) {
+				console.debug("addPromotions::Starting with promo anniversaries k: " + k + ", and make sure it's <= " + CA.endDate.getUTCFullYear() + ".");
+				for (k; k <= CA.endDate.getUTCFullYear(); k++) {
 					let tempDate = new Date (promotionDate);
 					tempDate.setFullYear(k);
 					console.debug(`addPromotions::Adding anniversary date ${tempDate}.`);
@@ -1252,7 +1180,7 @@ function addPeriod (p) {
 function calculate() {
 	console.log("calculate:Starting calculations")
 	let endDate = getEndDate();
-	resultStatus.innerHTML="";
+	updateResultStatus("");
 	//if (step == salaries[level].length -1) {
 		//console.debug("Top of your level.  This should be easy.");
 		console.debug (`calculate::There are ${periods.length} periods to be concerned with.`);
@@ -1489,7 +1417,7 @@ function calculate() {
 			preTD = createHTMLElement("td", {"parentNode":totalTR, "nodeText": formatter.format(total["shouldHaveMade"])});
 			preTD = createHTMLElement("td", {"parentNode":totalTR, "nodeText": formatter.format(total["backpay"])});
 		}
-		resultStatus.innerHTML = "Results shown below.";
+		updateResultStatus("Results shown below.");
 	//} else {
 		//console.debug("Not the top of your level.  This should be difficult.");
 		
@@ -1505,7 +1433,7 @@ function isValidDate (d) {
 		let dparts = d.match(dateRE);
 		d = new Date(dparts[1], dparts[2]-1, dparts[3]);
 
-		if (d >= TABegin && d<= EndDate) rv = true;
+		if (d >= CA.startDate.getUTCFullYear() && d<= CA.endDate.getUTCFullYear()) rv = true;
 	}
 	catch (ex) {
 		console.error ("Something went wrong: " + ex.toString());
@@ -1514,11 +1442,17 @@ function isValidDate (d) {
 } // End of isValidDate
 
 function addStartDateErrorMessage () {
+	let startDateTxt = document.getElementById("startDateTxt");
 	console.debug("Error:  st is " + startDateTxt.value + ".");
 	var errDiv = createHTMLElement("div", {"parentNode":startDateTxt.parentNode, "id":"startDateError", "class":"error"});
 	createHTMLElement("p", {"parentNode":errDiv, "nodeText":"Please enter the date at which you started at the level you were at on December 22, 2018. If you weren't a CS at that time, enter the date you started as a CS.  All dates must be in the format of YYYY-MM-DD."});
 	levelSel.setAttribute("aria-describedby", "startDateError");
 	return;
+}
+
+function updateResultStatus(message) {
+    let resultStatus = document.getElementById("resultStatus");
+    resultStatus.innerHTML = message;
 }
 
 let formatter = new Intl.NumberFormat('en-CA', {
@@ -1536,8 +1470,8 @@ function createHTMLElement (type, attribs) {
 	//This used to use a var mainForm, but I localized it to just access the element directly
 	document.getElementById("mainForm").appendChild(newEl);
 
-	var dbug = (arguments.length == 3 &&arguments[2] != null && arguments[2] != false ? true : false);
-	for (var k in attribs) {
+	let dbug = (arguments.length == 3 &&arguments[2] != null && arguments[2] != false ? true : false);
+	for (let k in attribs) {
 		console.debug("Dealing with attrib " + k + ".");
 		if (k == "parentNode") {
 			console.debug("Dealing with parentnode.");
@@ -1570,14 +1504,15 @@ function createHTMLElement (type, attribs) {
 		}
 	}
 	return newEl;
-}
+} // End of createHTMLElement
+
+
 function removeChildren (el) {
 	var dbug = (arguments.length == 2 && arguments[1] != null && arguments[1] != false ? true : false);
 	while (el.firstChild) {	
 		el.removeChild(el.firstChild);
 	}
 }
-
 
 // #region events
 
@@ -1648,7 +1583,7 @@ function addPromotionHandler() {
 		newPromotionFS.appendChild(promoButtonsDiv);
 	}
 
-	resultStatus.innerHTML = "New Acting section added.";
+	updateResultStatus("New Acting section added.");
 } // End of addPromotionHandler
 
 function addActingHandler () {
@@ -1703,8 +1638,8 @@ function addActingHandler () {
 	let actingButtonsDiv = null;
 	if (id === 0) {
 		actingButtonsDiv = createHTMLElement("div", {"parentNode":newActingFS, "id":"actingButtonsDiv"});
-		var newDelActingBtn = createHTMLElement("input", {"parentNode":actingButtonsDiv, "type":"button", "value":"Remove", "id": "removeActingBtn" + actings});
-		var newAddActingBtn = createHTMLElement("input", {"parentNode":actingButtonsDiv, "type":"button", "value":"Add another Acting", "class":"actingBtn", "id": "addActingsBtn" + id});
+		let newDelActingBtn = createHTMLElement("input", {"parentNode":actingButtonsDiv, "type":"button", "value":"Remove", "id": "removeActingBtn"});
+		let newAddActingBtn = createHTMLElement("input", {"parentNode":actingButtonsDiv, "type":"button", "value":"Add another Acting", "class":"actingBtn", "id": "addActingsBtn"});
 		newAddActingBtn.addEventListener("click", addActingHandler, false);
 		newDelActingBtn.addEventListener("click", removeActingDiv, false);
 	} else {
@@ -1714,7 +1649,7 @@ function addActingHandler () {
 
 	if (toFocus) newActingFromDate.focus();
 
-	resultStatus.innerHTML="New Acting section added.";
+	updateResultStatus("New Acting section added.");
 } // End of addActingHandler
 
 function addLWoPHandler () {
@@ -1750,8 +1685,8 @@ function addLWoPHandler () {
 	let lwopButtonsDiv = null;
 	if (id === 0) {
 		lwopButtonsDiv = createHTMLElement("div", {"parentNode":newLWoPFS, "id":"lwopButtonsDiv"});
-		var newDelLWoPBtn = createHTMLElement("input", {"parentNode":lwopButtonsDiv, "type":"button", "value":"Remove", "id": "removeLWoPBtn" + lwops});
-		var newAddLWoPBtn = createHTMLElement("input", {"parentNode":lwopButtonsDiv, "type":"button", "value":"Add another LWoP", "class":"lwopBtn", "id": "addLWoPsBtn" + id});
+		let newDelLWoPBtn = createHTMLElement("input", {"parentNode":lwopButtonsDiv, "type":"button", "value":"Remove", "id": "removeLWoPBtn"});
+		let newAddLWoPBtn = createHTMLElement("input", {"parentNode":lwopButtonsDiv, "type":"button", "value":"Add another LWoP", "class":"lwopBtn", "id": "addLWoPsBtn" });
 		newAddLWoPBtn.addEventListener("click", addLWoPHandler, false);
 		newDelLWoPBtn.addEventListener("click", removeLWoPDiv, false);
 	} else {
@@ -1760,7 +1695,7 @@ function addLWoPHandler () {
 	}
 
 	if (toFocus) newLWoPFromDate.focus();
-	resultStatus.innerHTML="New leave without pay section added.";
+	     updateResultStatus("New leave without pay section added.");
 } // End of lWoPHandler
 
 function addOvertimeHandler () {
@@ -1816,8 +1751,8 @@ function addOvertimeHandler () {
 	let otButtonsDiv = null;
 	if (id === 0) {
 		otButtonsDiv = createHTMLElement("div", {"parentNode":newOvertimeFS, "id":"otButtonsDiv"});
-		var newDelOvertimeBtn = createHTMLElement("input", {"parentNode":otButtonsDiv, "type":"button", "value":"Remove", "id": "removeOvertimeBtn" + overtimes});
-		var newAddOvertimeBtn = createHTMLElement("input", {"parentNode":otButtonsDiv, "type":"button", "value":"Add another Overtime", "class":"otBtn", "id": "addOvertimesBtn" + id});
+		var newDelOvertimeBtn = createHTMLElement("input", {"parentNode":otButtonsDiv, "type":"button", "value":"Remove", "id": "removeOvertimeBtn"});
+		var newAddOvertimeBtn = createHTMLElement("input", {"parentNode":otButtonsDiv, "type":"button", "value":"Add another Overtime", "class":"otBtn", "id": "addOvertimesBtn"});
 		newAddOvertimeBtn.addEventListener("click", addOvertimeHandler, false);
 		newDelOvertimeBtn.addEventListener("click", removeOvertimeDiv, false);
 	} else {
@@ -1826,7 +1761,7 @@ function addOvertimeHandler () {
 	}
 	if (toFocus) newOvertimeDate.focus();
 
-	resultStatus.innerHTML="New overtime section added.";
+	     updateResultStatus("New overtime section added.");
 } // End of addOvertimeHandler
 
 function addLumpSumHandler () {
@@ -1866,8 +1801,8 @@ function addLumpSumHandler () {
 	let lumpSumButtonsDiv = null;
 	if (id === 0) {
 		lumpSumButtonsDiv = createHTMLElement("div", {"parentNode":newLumpSumFS, "id":"lumpSumButtonsDiv"});
-		let newDelLumpSumBtn = createHTMLElement("input", {"parentNode":lumpSumButtonsDiv, "type":"button", "value":"Remove", "id": "removeLumpSumBtn" + lumpSums});
-		let newAddLumpSumBtn = createHTMLElement("input", {"parentNode":lumpSumButtonsDiv, "type":"button", "value":"Add another LumpSum", "class":"lumpSumBtn", "id": "addLumpSumsBtn" + id});
+		let newDelLumpSumBtn = createHTMLElement("input", {"parentNode":lumpSumButtonsDiv, "type":"button", "value":"Remove", "id": "removeLumpSumBtn"});
+		let newAddLumpSumBtn = createHTMLElement("input", {"parentNode":lumpSumButtonsDiv, "type":"button", "value":"Add another LumpSum", "class":"lumpSumBtn", "id": "addLumpSumsBtn"});
 		newAddLumpSumBtn.addEventListener("click", addLumpSumHandler, false);
 		newDelLumpSumBtn.addEventListener("click", removeLumpSumDiv, false);
 	} else {
@@ -1884,7 +1819,7 @@ function addLumpSumHandler () {
 	newAddLumpSumBtn.addEventListener("click", addLumpSumHandler, false);
 	newDelLumpSumBtn.addEventListener("click", removeLumpSumDiv, false);
 	*/
-	resultStatus.innerHTML="New lump sum section added.";
+	     updateResultStatus("New lump sum section added.");
 } // End of addLumpSum Handler
 
 function removePromotionDiv (e) {
@@ -1907,7 +1842,7 @@ function removePromotionDiv (e) {
 	rmPromoFS.parentNode.removeChild(rmPromoFS);
 	rmPromoFS = null;
 
-	resultStatus.innerHTML="Promotion section removed.";
+	     updateResultStatus("Promotion section removed.");
 } // End of removePromotionDiv
 
 function removeActingDiv (e) {
@@ -1931,7 +1866,7 @@ function removeActingDiv (e) {
 	rmActingFS.parentNode.removeChild(rmActingFS);
 	rmActingFS = null;
 
-	resultStatus.innerHTML="Acting section removed.";
+	     updateResultStatus("Acting section removed.");
 } // End of removeActingDiv
 
 function removeLWoPDiv (e) {
@@ -1955,7 +1890,7 @@ function removeLWoPDiv (e) {
 
 	rmLwopFS.parentNode.removeChild(rmLwopFS);
 	rmLwopFS = null;
-	resultStatus.innerHTML="Leave Without Pay section removed.";
+	     updateResultStatus("Leave Without Pay section removed.");
 } // End of removeLWoPDiv
 
 function removeOvertimeDiv (e) {
@@ -1979,7 +1914,7 @@ function removeOvertimeDiv (e) {
 	rmOTFS.parentNode.removeChild(rmOTFS);
 	rmOTFS = null;
 
-	resultStatus.innerHTML="Overtime section removed.";
+	     updateResultStatus("Overtime section removed.");
 } // End of removeOvertimeDiv
 
 function removeLumpSumDiv (e) {
@@ -2034,7 +1969,7 @@ function removeLumpSumDiv (e) {
 		}
 	}
 	*/
-	resultStatus.innerHTML="Lump sum section removed.";
+	     updateResultStatus("Lump sum section removed.");
 } // End of removeLumpSumDiv
 
 function setupEventListeners() {
