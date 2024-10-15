@@ -121,7 +121,11 @@ var newRates = {};
 
 // Helper function to format a Date object to "YYYY-MM-DD".
 Date.prototype.toISODateString = function() {
-    return this.toISOString().split('T')[0];
+	return this.toISOString().split('T')[0];
+};
+// Getting tired of date strings coming in like "Sat Apr 30 2022 20:00:00 blah blah blah"
+Date.prototype.toDateString = function() {
+	return this.toISODateString();
 };
 
 function oldinit () {
@@ -966,37 +970,40 @@ function getActings () {
 	let actingStints = document.querySelectorAll(".actingStints");
 	console.debug(`getActings::Dealing with ${actingStints.length} acting stints.`);
 
-	for (let i =0; i < actings; i++) {
+	for (let i =0; i < actingStints.length; i++) {
 		let actingLvl = actingStints[i].getElementsByTagName("select")[0].value;
 		let dates = actingStints[i].getElementsByTagName("input");
-		let actingFromDate = dates[0].value;
-		let actingToDate = dates[1].value;
-		console.debug(`getActings::Checking acting at ${actingLvl} from ${actingFromDate} to ${actingToDate}.`);
-		if (actingLvl >=0 && actingLvl <5 && actingFromDate.match(/\d\d\d\d-\d\d-\d\d/) && actingToDate.match(/\d\d\d\d-\d\d-\d\d/)) {
+		let actingFromDate = new Date(dates[0].value);
+		let actingToDate = new Date(dates[1].value);
+		console.debug(`getActings::Checking acting at level ${actingLvl} from ${actingFromDate.toISODateString()} to ${actingToDate.toISODateString()}.`);
+		if (actingLvl >= 0 && actingLvl < CA.levels && !isNaN(actingFromDate.getTime()) && !isNaN(actingToDate.getTime())) {
 			console.debug("getActings::Passed the initial tests.");
-			// TODO: Move to central verification block
-			if (actingFromDate <= endDate.toISODateString() && actingToDate >= CA.startDate.toISODateString() && actingToDate > actingFromDate) {
-				if (actingFromDate < CA.startDate.toISODateString() && actingToDate >= CA.startDate.toISODateString() )  {
-					actingFromDate = CA.startDate.toISODateString();
-					console.warn("")
-				}
+			// TODO: Move to central verification block?
+			// Check if the from date is before the TA End Date, and the To Date is after the beginning of the TA period, and that to the Do date is after the From date.
+			if (actingFromDate <= endDate && actingToDate >= CA.startDate && actingToDate > actingFromDate) {
+				// if (actingFromDate < CA.startDate && actingToDate >= CA.startDate )  { actingFromDate = CA.startDate; } // TODO: Wasn't in the original, verify still needed
 				console.debug("getActings::And the dates are in the right range.");
 				// add a period for starting
-				var from = addPeriod({"startDate":actingFromDate, "increase":0, "type":"Acting Start", "multiplier":1, "level":(actingLvl-1)});
+				let from = addPeriod({"startDate":actingFromDate.toISODateString() , "type":"Acting Start", "level":actingLvl});
 
 				// add a period for returning
-				var toParts = actingToDate.match(/(\d\d\d\d)-(\d\d)-(\d\d)/);
-				actingToDate = new Date(toParts[1], (toParts[2]-1), toParts[3]);
-				actingToDate.setDate(actingToDate.getDate() + parseInt(1));
-				var to = addPeriod({"startDate":actingToDate.toISODateString(), "increase":0, "type":"Acting Finished", "multiplier":1});
-				var fromParts = actingFromDate.match(/(\d\d\d\d)-(\d\d)-(\d\d)/);
+				actingToDate.setDate(actingToDate.getDate() +1); // TODO: Verify that day +1 is needed
+				let to = addPeriod({"startDate":actingToDate.toISODateString(), "type":"Acting Finished"});
+				let fromParts = actingFromDate.match(/(\d\d\d\d)-(\d\d)-(\d\d)/);
 				actingFromDate = new Date(fromParts[1], (fromParts[2]-1), fromParts[3]);
 				
-				for (var j = parseInt(fromParts[1])+1; j < toParts[1]; j++) {
+				for (let j = parseInt(fromParts[1])+1; j < toParts[1]; j++) {
 					if (j + "-" + fromParts[2] + "-" + fromParts[3] < actingToDate.toISODateString()) {
-						addPeriod({"startDate":j + "-" + fromParts[2] + "-" + fromParts[3], "increase":0, "type":"Acting Anniversary", "multiplier":1});
+						addPeriod({"date":j + "-" + fromParts[2] + "-" + fromParts[3], "increase":0, "type":"Acting Anniversary", "multiplier":1});
 					}
 				}
+
+				// TODO: Test to see if getUtcMonth and GetUTCDate are needed. Date, probably. Month, maybe?
+				for (let year = actingFromDate.getFullYear() + 1; year < actingToDate.getFullYear(); year++) {
+					let anniversaryDate = new Date(Date.UTC(year, actingFromDate.getUTCMonth(), actingFromDate.getUTCDate()));
+					if (anniversaryDate < actingToDate) { addPeriod({ "date": anniversaryDate.toISODateString(), "type": "Acting Anniversary"}); }
+				}
+
 				saveValues.push("afrom" + i + "=" + actingFromDate.toISODateString());
 				saveValues.push("ato" + i + "=" + actingToDate.toISODateString());
 				saveValues.push("alvl" + i + "=" + actingLvl);
