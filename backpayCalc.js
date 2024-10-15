@@ -231,7 +231,7 @@ function populateCASelect(bookmarkCA = null) {
 function populateLevelSelect(bookmarkLevel = null){
 	let levelSel = document.getElementById("levelSelect");
 	levelSel.length = 1;
-    for (let i = 0; i < data.chosenCA().levels; i++) {
+    for (let i = 0; i < CA.levels; i++) {
 		let attributes = {"parentNode": levelSel, "textNode": `${classification}-${i + 1}`, "value": i};
 		if (i === bookmarkLevel) { attributes["selected"] = true; }
 		createHTMLElement("option", attributes);
@@ -240,7 +240,7 @@ function populateLevelSelect(bookmarkLevel = null){
 
 function populateStepSelect(bookmarkStep = null){
 	let stepSel = document.getElementById("stepSelect");
-	let steps =  data.chosenCA().salaries[level];
+	let steps =  CA.salaries[level];
 
 	for (let i = 0; i < steps.length; i++) {
 		let attributes = {"parentNode": stepSel, "textNode": `Step ${i+1} - ${ getNum(steps[i]) }`, "value": i};
@@ -693,30 +693,30 @@ function guessStepByStartDate () {
 		console.error("guessStepByStartDate:: Start date isn't a valid date?", startDate);
 		return;
 	}
-	if (isNaN(level) || level < 0 || level > data.chosenCA().levels) {
+	if (isNaN(level) || level < 0 || level > CA.levels) {
 		console.error("guessStepByStartDate:: Level not selected yet", level);
 		return;
 	}
 
 	// To get here you must have a valid date and a valid level
-	let timeDiff = (data.chosenCA().startDate - startDate) / day;
+	let timeDiff = (CA.startDate - startDate) / day;
 	let years = Math.floor(timeDiff/365);
 
-	console.debug(`guessStepByStartDate:: TimeDiff between ${data.chosenCA().startDate.toString()} and ${startDate.toString()}: ${timeDiff}`);
+	console.debug(`guessStepByStartDate:: TimeDiff between ${CA.startDate.toString()} and ${startDate.toString()}: ${timeDiff}`);
 
 	step = 0;
 	let calcStartDate = document.getElementById("calcStartDate");
 	if (timeDiff < 0) { // You started after the CA started
-		calcStartDate.setAttribute("datetime", data.chosenCA().startDate.toISODateString());
+		calcStartDate.setAttribute("datetime", CA.startDate.toISODateString());
 		calcStartDate.innerHTML = startDate.toLocaleString("en-CA", {year: 'numeric', month: 'long', day: 'numeric'});
 
 		step = 1;
 	} else { // You started before the CA started
-		calcStartDate.setAttribute("datetime", data.chosenCA().startDate.toISODateString());
-		calcStartDate.innerHTML = data.chosenCA().startDate.toLocaleString("en-CA", {year: 'numeric', month: 'long', day: 'numeric'});
+		calcStartDate.setAttribute("datetime", CA.startDate.toISODateString());
+		calcStartDate.innerHTML = CA.startDate.toLocaleString("en-CA", {year: 'numeric', month: 'long', day: 'numeric'});
 
 		// Ensuring the calculated step does not exceed the number of available steps
-		step = Math.min(step+years, data.chosenCA().salaries[level].length);
+		step = Math.min(step+years, CA.salaries[level].length);
 	}
 
 	document.getElementById("stepSelect").selectedIndex=step+1;
@@ -760,8 +760,8 @@ function parseDateString(dateString) {
 
 function startProcess () {
 	// Reset the periods every time pay is calculated
-	periods = structuredClone(data.chosenCA().periods);
-	// data.chosenCA().calculatedPeriods = structuredClone(data.chosenCA().calculatedPeriods);
+	periods = structuredClone(CA.periods);
+	// CA.calculatedPeriods = structuredClone(CA.calculatedPeriods);
 	console.log(`startProcess:: Periods being used for "${group}" "${classification}" "${chosenCA}":`, periods);
 
 	saveValues = [];
@@ -829,7 +829,6 @@ function startProcess () {
 // This ones starts: get the CS-0level, get the startDateText date, check for leapyear, set the startDateTxt value, figure out your step, select the step
 function getSalary () {
 	// TODO: Add error handling. Start Date < End Date, CA / Level / Step all selected
-	let CA = data.chosenCA();
 	let levelSelect = document.getElementById("levelSelect");
 
 	// TODO: Move this to centralized field validation
@@ -920,7 +919,6 @@ function getSalary () {
 } // End of getSalary
 
 function addPromotions () {
-	let CA = data.chosenCA();
 	// Add promotions
 	let promotions = document.querySelectorAll(".promotions");
 	let numOfPromotions = promotions.length;
@@ -974,7 +972,6 @@ function addPromotions () {
 
 function getActings () {
 	// Add actings
-	let CA = data.chosenCA();
 	let endDate = getEndDate();
 	let actingStints = document.querySelectorAll(".actingStints");
 	console.debug(`getActings::Dealing with ${actingStints.length} acting stints.`);
@@ -1038,7 +1035,6 @@ function getActings () {
 function getLWoPs () {
 	// Add lwops
 	let lwopStints = document.querySelectorAll(".lwopStints");
-	let CA = data.chosenCA();
 	let endDate = getEndDate();
 	console.debug(`Dealing with ${lwopStints.length} lwops.`);
 	
@@ -1085,7 +1081,6 @@ function getLWoPs () {
 	
 function getOvertimes () {
 	// Add Overtimes
-	let CA = data.chosenCA();
 	let endDate = getEndDate();
 	let overtimeStints = document.querySelectorAll(".overtimes");
 
@@ -1124,7 +1119,6 @@ function getOvertimes () {
 function getLumpSums () {
 	// Add LumpSums
 	// TODO: CA.startDate and the endDate from the form are used everywhere, consider centralizing them?
-	let CA = data.chosenCA();
 	let endDate = getEndDate();
 	let lumpSums = document.querySelectorAll(".lumpSums");
 	console.debug(`Dealing with ${lumpSums.length} lumpsums.`);
@@ -1257,9 +1251,7 @@ function addPeriod (p) {
 
 function calculate() {
 	console.log("calculate:Starting calculations")
-	let CA = data.chosenCA();
 	let endDate = getEndDate();
-
 	resultStatus.innerHTML="";
 	//if (step == salaries[level].length -1) {
 		//console.debug("Top of your level.  This should be easy.");
@@ -1590,7 +1582,7 @@ function removeChildren (el) {
 // #region events
 
 function addPromotionHandler() {
-	if (data.chosenCA() == null) {console.error("addPromotionHandler:: Attempted to update promotion selectors without choosing a collective agreement first"); return; }
+	if (CA == null) {console.error("addPromotionHandler:: Attempted to update promotion selectors without choosing a collective agreement first"); return; }
 	let toFocus = true;
 	let pdate = null;
 	let plvl = null;
@@ -1625,7 +1617,7 @@ function addPromotionHandler() {
 
 	// TODO: Add bookmarking options somewhere around here
 
-	for (let j = 0; j < data.chosenCA().levels; j++) {
+	for (let j = 0; j < CA.levels; j++) {
 		let newPromoOpt = createHTMLElement("option", { "parentNode": newPromotionSel, "value": j, "nodeText": (classification +"-" + (j +1))});
 		if (plvl) { if (plvl === j) newPromoOpt.setAttribute("selected", "selected"); }
 		else {
@@ -1660,7 +1652,7 @@ function addPromotionHandler() {
 } // End of addPromotionHandler
 
 function addActingHandler () {
-	if (data.chosenCA() == null) {console.error("addActingHandler:: Attempted to update acting selector without choosing a collective agreement first"); return; }
+	if (CA == null) {console.error("addActingHandler:: Attempted to update acting selector without choosing a collective agreement first"); return; }
 
 	let toFocus = true;
 	let afdate = null;
@@ -1699,7 +1691,7 @@ function addActingHandler () {
 	createHTMLElement("label", {"parentNode":newActingFS, "for":"actingLevel" + id, "nodeText":"Acting Level: "});
 	let newActingSel = createHTMLElement("select", {"parentNode":newActingFS, "id":"actingLevel" + id});
 
-	for (let j = 0; j < data.chosenCA().levels; j++) {
+	for (let j = 0; j < CA.levels; j++) {
 		let newPromoOpt = createHTMLElement("option", {"parentNode":newActingSel, "value": j, "nodeText":classification + " - " + (j +1) });
 		if (alvl) {
 			if (alvl === j) newPromoOpt.setAttribute("selected", "selected");
@@ -2068,11 +2060,11 @@ function setupEventListeners() {
         populateLevelSelect();
 
 		const levelStartDate = document.getElementById("levelStartDate");
-		levelStartDate.setAttribute("datetime", data.chosenCA().startDate.toISODateString());
-		levelStartDate.innerHTML = data.chosenCA().startDate.toLocaleString("en-CA", { year: 'numeric', month: 'long', day: 'numeric' });
+		levelStartDate.setAttribute("datetime", CA.startDate.toISODateString());
+		levelStartDate.innerHTML = CA.startDate.toLocaleString("en-CA", { year: 'numeric', month: 'long', day: 'numeric' });
 		const calcStartDate = document.getElementById("calcStartDate");
-		calcStartDate.setAttribute("datetime", data.chosenCA().startDate.toISODateString());
-		calcStartDate.innerHTML = data.chosenCA().startDate.toLocaleString("en-CA", { year: 'numeric', month: 'long', day: 'numeric' });
+		calcStartDate.setAttribute("datetime", CA.startDate.toISODateString());
+		calcStartDate.innerHTML = CA.startDate.toLocaleString("en-CA", { year: 'numeric', month: 'long', day: 'numeric' });
 
         generateTables(CA); // TODO: Delete old tables when CA changes
     }, false);
@@ -2124,7 +2116,7 @@ function main() {
 		populateGroupSelect ("IT Group");
 		populateClassificationSelect("IT");
 		populateCASelect("2021-2025");
-		generateTables(data.chosenCA());
+		generateTables(CA);
 		populateLevelSelect(0);
 		populateStepSelect(0);
 	} else {populateGroupSelect ();}
