@@ -5,6 +5,7 @@ const data = {
             "2018-2021": {
                 "startDate": "2018-12-22",
                 "endDate": "2021-03-17", /* TODO: this probably shouldn't be used, allow any arbitrary date in the future */
+                "hoursPerWeek":37.5,
                 "salaries": [
                     [56907, 59011, 61111, 63200, 65288, 67375, 69461, 73333],
                     [70439, 72694, 74947, 77199, 79455, 81706, 83960, 86213],
@@ -24,6 +25,7 @@ const data = {
             "2021-2025": {
                 "startDate": "2021-12-22",
                 "endDate": "2024-03-17",
+                "hoursPerWeek":37.5,
                 "salaries": [
                         [60696, 62940, 65180, 67408, 69634, 71861, 74086, 78216],
                         [75129, 77535, 79937, 82340, 84745, 87147, 89551, 91953],

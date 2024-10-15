@@ -27,7 +27,7 @@ var saveValues = null; // This can probably be replaced just by looking the valu
 var showExtraCols = true;
 
 const WeeksInYear = 52.176;
-
+const DaysInYear = 260.88;
 // I'm hoping this singleton makes it
 // const appData = (function() {
 //     let lang = null;
@@ -60,6 +60,7 @@ const WeeksInYear = 52.176;
 let group = null;
 let classification = null;
 let chosenCA = null;
+let CA = null;
 let level = -1;
 let step = -1;
 
@@ -69,20 +70,20 @@ data.chosenCA = function() {
 };
 
 
-var periods = [];
-var lumpSumPeriods = {};
-var overtimePeriods = {};
+let periods = [];
+let lumpSumPeriods = {};
+let overtimePeriods = {};
 
 
 //let levelSel = document.getElementById("levelSelect");
 //var stepSel = document.getElementById("stepSelect");
 // Form elements
-var mainForm = document.getElementById("mainForm");
-var lastModTime = document.getElementById("lastModTime");
-var startDateTxt = document.getElementById("startDateTxt");
-var resultStatus = document.getElementById("resultStatus");
-var calcStartDate = document.getElementById("calcStartDate");
-var endDateTxt = document.getElementById("endDateTxt");
+let mainForm = document.getElementById("mainForm");
+let lastModTime = document.getElementById("lastModTime");
+let startDateTxt = document.getElementById("startDateTxt");
+let resultStatus = document.getElementById("resultStatus");
+let calcStartDate = document.getElementById("calcStartDate");
+let endDateTxt = document.getElementById("endDateTxt");
 // Buttons
 // var addPromotionBtn = document.getElementById("addPromotionBtn");
 // var addActingBtn = document.getElementById("addActingBtn");
@@ -90,14 +91,14 @@ var endDateTxt = document.getElementById("endDateTxt");
 // var addLwopBtn = document.getElementById("addLwopBtn");
 // var addLumpSumBtn = document.getElementById("addLumpSumBtn");
 // Result elements
-var resultsDiv = document.getElementById("resultsDiv");
-var resultsBody = document.getElementById("resultsBody");
-var resultsFoot = document.getElementById("resultsFoot");
-var resultsTheadTR = document.getElementById("resultsTheadTR");
+
 // Maths Stuff ?
 var TABegin = new Date("2021", "11", "22");		// Remember months:  0 == Janaury, 1 == Feb, etc.
 var EndDate = new Date("2024", "02", "17");		// This is the day after this should stop calculating; same as endDateTxt.value in the HTML
 var day = (1000 * 60 * 60 * 24);
+
+
+
 var parts = [];
 
 
@@ -111,9 +112,8 @@ var lwops = 0;
 var lastModified = new Date("2023", "09", "22");
 
 //var salaries = [];
-var daily = [];
 var hourly = [];
-var newRates = {};
+// var newRates = {};
 
 //var days = [31, 29, 31
 
@@ -124,71 +124,71 @@ Date.prototype.toISODateString = function() {
 	return this.toISOString().split('T')[0];
 };
 // Getting tired of date strings coming in like "Sat Apr 30 2022 20:00:00 blah blah blah"
-Date.prototype.toDateString = function() {
-	return this.toISODateString();
+Date.prototype.toString = function() {
+	return this.toISOString();
 };
 
-function oldinit () {
-	console.debug("Initting");
-	//saveValues = new Map();
-	var calcBtn = document.getElementById("calcBtn");
-	let levelSel = document.getElementById("levelSelect");
-	//if (updateHash) levelSel.addEventListener("change", saveValue, false);
-	let stepSel = document.getElementById("stepSel");
-	//if (updateHash) stepSel.addEventListener("change", saveValue, false);
-	resultsDiv = document.getElementById("resultsDiv");
-	startDateTxt = document.getElementById("startDateTxt");
-	//if (updateHash) startDateTxt.addEventListener("change", saveValue, false);
-	endDateTxt = document.getElementById("endDateTxt");
-	//if (updateHash) startDateTxt.addEventListener("change", saveValue, false);
-	calcStartDate = document.getElementById("calcStartDate");
-	// addPromotionBtn = document.getElementById("addPromotionBtn");
-	// addActingBtn = document.getElementById("addActingBtn");
-	// addOvertimeBtn = document.getElementById("addOvertimeBtn");
-	// addLwopBtn = document.getElementById("addLwopBtn");
-	// addLumpSumBtn = document.getElementById("addLumpSumBtn");
-	resultsBody = document.getElementById("resultsBody");
-	resultsFoot = document.getElementById("resultsFoot");
-	resultsTheadTR = document.getElementById("resultsTheadTR");
-	resultStatus = document.getElementById("resultStatus");
-	lastModTime = document.getElementById("lastModTime");
-
-	if (lastModTime) {
-		lastModTime.setAttribute("datetime", lastModified.toISODateString());
-		lastModTime.innerHTML = lastModified.toLocaleString("en-CA", { year: 'numeric', month: 'long', day: 'numeric' });
-	}
-	if (dbug || showExtraCols) {
-		var ths = resultsTheadTR.getElementsByTagName("th");
-		if (ths.length == 4) {
-			createHTMLElement("th", {"parentNode":resultsTheadTR, "scope":"col", "textNode":"Level"});
-			createHTMLElement("th", {"parentNode":resultsTheadTR, "scope":"col", "textNode":"Step"});
-			createHTMLElement("th", {"parentNode":resultsTheadTR, "scope":"col", "textNode":"There?"});
-			createHTMLElement("th", {"parentNode":resultsTheadTR, "scope":"col", "textNode":"Salary"});
-			createHTMLElement("th", {"parentNode":resultsTheadTR, "scope":"col", "textNode":"Working Days"});
-		}
-	}
-	/*for (var r in results) {
-		results[r] = document.getElementById(r);
-	}*/
-	console.debug("init::MainForm is " + mainForm + ".");
-	if (levelSel && stepSel && mainForm && startDateTxt && calcBtn && addActingBtn && addPromotionBtn) {
-		console.debug("Adding change event to calcBtn.");
-		levelSel.addEventListener("change", populateSalary, false);
-		if (levelSel.value.match(/[1-5]/)) populateSalary();
-		startDateTxt.addEventListener("change", selectSalary, false);
-		if (startDateTxt.value.replace(/[^-\d]/, "").match(/YYYY-MM-DD/)) populateSalary();
-
-		// calcBtn.addEventListener("click", startProcess, false);
-		// addActingBtn.addEventListener("click", addActingHandler, false);
-		// addLwopBtn.addEventListener("click", addLWoPHandler, false);
-		// addOvertimeBtn.addEventListener("click", addOvertimeHandler, false);
-		// addLumpSumBtn.addEventListener("click", addLumpSumHandler, false);
-		// addPromotionBtn.addEventListener("click", addPromotionHandler, false);
-	} else {
-		if (dbug) console.error ("Couldn't get levelSelect.");
-	}
-	handleHash ();
-} // End of oldinit
+// function oldinit () {
+// 	console.debug("Initting");
+// 	//saveValues = new Map();
+// 	var calcBtn = document.getElementById("calcBtn");
+// 	let levelSel = document.getElementById("levelSelect");
+// 	//if (updateHash) levelSel.addEventListener("change", saveValue, false);
+// 	let stepSel = document.getElementById("stepSel");
+// 	//if (updateHash) stepSel.addEventListener("change", saveValue, false);
+// 	resultsDiv = document.getElementById("resultsDiv");
+// 	startDateTxt = document.getElementById("startDateTxt");
+// 	//if (updateHash) startDateTxt.addEventListener("change", saveValue, false);
+// 	endDateTxt = document.getElementById("endDateTxt");
+// 	//if (updateHash) startDateTxt.addEventListener("change", saveValue, false);
+// 	calcStartDate = document.getElementById("calcStartDate");
+// 	// addPromotionBtn = document.getElementById("addPromotionBtn");
+// 	// addActingBtn = document.getElementById("addActingBtn");
+// 	// addOvertimeBtn = document.getElementById("addOvertimeBtn");
+// 	// addLwopBtn = document.getElementById("addLwopBtn");
+// 	// addLumpSumBtn = document.getElementById("addLumpSumBtn");
+// 	resultsBody = document.getElementById("resultsBody");
+// 	resultsFoot = document.getElementById("resultsFoot");
+// 	resultsTheadTR = document.getElementById("resultsTheadTR");
+// 	resultStatus = document.getElementById("resultStatus");
+// 	lastModTime = document.getElementById("lastModTime");
+//
+// 	if (lastModTime) {
+// 		lastModTime.setAttribute("datetime", lastModified.toISODateString());
+// 		lastModTime.innerHTML = lastModified.toLocaleString("en-CA", { year: 'numeric', month: 'long', day: 'numeric' });
+// 	}
+// 	if (dbug || showExtraCols) {
+// 		var ths = resultsTheadTR.getElementsByTagName("th");
+// 		if (ths.length == 4) {
+// 			createHTMLElement("th", {"parentNode":resultsTheadTR, "scope":"col", "textNode":"Level"});
+// 			createHTMLElement("th", {"parentNode":resultsTheadTR, "scope":"col", "textNode":"Step"});
+// 			createHTMLElement("th", {"parentNode":resultsTheadTR, "scope":"col", "textNode":"There?"});
+// 			createHTMLElement("th", {"parentNode":resultsTheadTR, "scope":"col", "textNode":"Salary"});
+// 			createHTMLElement("th", {"parentNode":resultsTheadTR, "scope":"col", "textNode":"Working Days"});
+// 		}
+// 	}
+// 	/*for (var r in results) {
+// 		results[r] = document.getElementById(r);
+// 	}*/
+// 	console.debug("init::MainForm is " + mainForm + ".");
+// 	if (levelSel && stepSel && mainForm && startDateTxt && calcBtn && addActingBtn && addPromotionBtn) {
+// 		console.debug("Adding change event to calcBtn.");
+// 		levelSel.addEventListener("change", populateSalary, false);
+// 		if (levelSel.value.match(/[1-5]/)) populateSalary();
+// 		startDateTxt.addEventListener("change", selectSalary, false);
+// 		if (startDateTxt.value.replace(/[^-\d]/, "").match(/YYYY-MM-DD/)) populateSalary();
+//
+// 		// calcBtn.addEventListener("click", startProcess, false);
+// 		// addActingBtn.addEventListener("click", addActingHandler, false);
+// 		// addLwopBtn.addEventListener("click", addLWoPHandler, false);
+// 		// addOvertimeBtn.addEventListener("click", addOvertimeHandler, false);
+// 		// addLumpSumBtn.addEventListener("click", addLumpSumHandler, false);
+// 		// addPromotionBtn.addEventListener("click", addPromotionHandler, false);
+// 	} else {
+// 		if (dbug) console.error ("Couldn't get levelSelect.");
+// 	}
+// 	handleHash ();
+// } // End of oldinit
 
 function populateGroupSelect (bookmarkGroup = null) {
 	// This *should* only ever run once
@@ -307,11 +307,11 @@ function getStr (str) {
 
 function generateAllRates() {
 	// Actual calculations start about 25-30 lines down
-	const calculateSalaryBreakdown = (annual) => ({
+	const calculateSalaryBreakdown = (annual, HoursPerWeek) => ({
 		annual: annual,
 		weekly: annual / WeeksInYear,
-		daily: annual / WeeksInYear / 5,
-		hourly: annual / WeeksInYear / 5 / 7.5
+		daily: annual / DaysInYear,
+		hourly: annual / WeeksInYear / HoursPerWeek
 	});
 
 	// Since groups, classifications, and CA are objects and not arrays they can't be iterated over directly
@@ -319,7 +319,7 @@ function generateAllRates() {
 		for (const classificationKey in data[groupKey]) {
 			for (const CAKey in data[groupKey][classificationKey]) {
 				console.debug("Processing rates for:", groupKey, classificationKey, CAKey );
-				const CA = data[groupKey][classificationKey][CAKey];
+				let CA = data[groupKey][classificationKey][CAKey];
 				let salaries = CA.salaries;
 				let levels = CA.salaries.length;
 				CA.levels =  levels;
@@ -334,7 +334,7 @@ function generateAllRates() {
 				for (let level = 0; level < levels; level++) {
 					let steps = [];
 					for (let step = 0; step < salaries[level].length; step++) {
-						steps.push(calculateSalaryBreakdown(salaries[level][step]));
+						steps.push(calculateSalaryBreakdown(salaries[level][step], CA.hoursPerWeek));
 					}
 					rates.current.salary.push(steps);
 				}
@@ -361,7 +361,7 @@ function generateAllRates() {
 						let steps = [];
 						for (let step = 0; step < previousSalary[level].length; step++) {
 							let annual = previousSalary[level][step].annual * (1 + incrementValue / 100);
-							steps.push(calculateSalaryBreakdown(annual));
+							steps.push(calculateSalaryBreakdown(annual,CA.hoursPerWeek));
 						}
 						rates[period.date].salary.push(steps);
 					}
@@ -524,7 +524,7 @@ function handleHash () {
 	if (params.get("enddt")) {
 		let ed = params.get("enddt");
 		if (ed.match(/\d\d\d\d-\d\d-\d\d/)) {
-			endDateTxt.value = ed;
+			// endDateTxt.value = ed; // TODO: Do something here?
 			toCalculate = toCalculate | 8;
 		}
 		hasHash = true;
@@ -735,6 +735,16 @@ function getStartDate() {
 	else { return false; }
 } // End of getStartDate
 
+function getEndDate() {
+	let endDateTxt = document.getElementById("endDateTxt").value.replace(/[^-\d]/g, "");
+	const date = parseDateString(endDateTxt);
+	console.debug("getStartDate:: Parsed end date:", date);
+
+	// Add an error if false? // addErrorMessage(endDateTxt.id, getStr("endDateErrorMsg"));
+	if (date) { return date; }
+	else { return false; }
+} // End of getStartDate
+
 function parseDateString(dateString) {
 	console.debug("parseDateString:: Initial date string:", dateString);
 
@@ -833,8 +843,7 @@ function getSalary () {
 		//return; //TODO: cancel processing if level is out of bounds
 	} else { saveValues.push("level="+level); }
 
-	let endDateText = document.getElementById("endDateTxt").value;
-	let endDate = parseDateString(endDateText);
+	let endDate = getEndDate();
 	let startDate = getStartDate();
 	if (level != null && startDate && endDate) {
 		console.debug("getSalary::Got valid date, now trying to figure out salary.", startDate);
@@ -943,7 +952,7 @@ function addPromotions () {
 					let tempDate = new Date (promotionDate);
 					tempDate.setFullYear(k);
 					console.debug(`addPromotions::Adding anniversary date ${tempDate}.`);
-					addPeriod ({"date": tempDate.toISODateString(), "increase":0, "type":"Anniversary Increase", "multiplier":1});
+					addPeriod ({"date": tempDate.toISODateString(), "type":"Anniversary Increase"});
 				}
 				saveValues.push("pdate" + i + "=" + promotionDate.toISODateString());
 				saveValues.push("plvl" + i + "=" + promoLevel);
@@ -966,7 +975,7 @@ function addPromotions () {
 function getActings () {
 	// Add actings
 	let CA = data.chosenCA();
-	let endDate = parseDateString(document.getElementById("endDateTxt").value);
+	let endDate = getEndDate();
 	let actingStints = document.querySelectorAll(".actingStints");
 	console.debug(`getActings::Dealing with ${actingStints.length} acting stints.`);
 
@@ -994,7 +1003,7 @@ function getActings () {
 				
 				for (let j = parseInt(fromParts[1])+1; j < toParts[1]; j++) {
 					if (j + "-" + fromParts[2] + "-" + fromParts[3] < actingToDate.toISODateString()) {
-						addPeriod({"date":j + "-" + fromParts[2] + "-" + fromParts[3], "increase":0, "type":"Acting Anniversary", "multiplier":1});
+						addPeriod({"date":j + "-" + fromParts[2] + "-" + fromParts[3], "type":"Acting Anniversary"});
 					}
 				}
 
@@ -1010,7 +1019,7 @@ function getActings () {
 			} else {
 				if (dbug) {
 					if (actingFromDate <= endDate.toISODateString()) console.log ("getActings::actingFrom is before endDate");
-					if (actingToDate >= TABegin.toISODateString()) console.log ("getActings::actingTo is after startDate");
+					if (actingToDate >= CA.start.toISODateString()) console.log ("getActings::actingTo is after startDate");
 					if (actingToDate <= endDate.toISODateString()) console.log ("getActings::actingTo is before endDate");
 					if (actingToDate > actingFromDate) console.log ("getActings::actingTo is after actingFrom");
 				}
@@ -1030,7 +1039,7 @@ function getLWoPs () {
 	// Add lwops
 	let lwopStints = document.querySelectorAll(".lwopStints");
 	let CA = data.chosenCA();
-	let endDate = parseDateString(document.getElementById("endDateTxt").value);
+	let endDate = getEndDate();
 	console.debug(`Dealing with ${lwopStints.length} lwops.`);
 	
 	for (let i =0; i < lwopStints.length; i++) {
@@ -1077,7 +1086,7 @@ function getLWoPs () {
 function getOvertimes () {
 	// Add Overtimes
 	let CA = data.chosenCA();
-	let endDate = parseDateString(document.getElementById("endDateTxt").value);
+	let endDate = getEndDate();
 	let overtimeStints = document.querySelectorAll(".overtimes");
 
 	console.debug(`overtimes::Dealing with ${overtimeStints.length} overtimes.`);
@@ -1116,7 +1125,7 @@ function getLumpSums () {
 	// Add LumpSums
 	// TODO: CA.startDate and the endDate from the form are used everywhere, consider centralizing them?
 	let CA = data.chosenCA();
-	let endDate = parseDateString(document.getElementById("endDateTxt").value);
+	let endDate = getEndDate();
 	let lumpSums = document.querySelectorAll(".lumpSums");
 	console.debug(`Dealing with ${lumpSums.length} lumpsums.`);
 	
@@ -1151,6 +1160,7 @@ function getLumpSums () {
 function addPeriod (p) {
 	let rv = null;
 	if (p["type"] === "End") {
+		// TODO: Doesn't seem to work as intended. Fiscal New Year is second last at 2025-04-01,End is last with 2024-02-14
 		console.log(`addPeriod:: Adding end period (${p.date}) to end of periods (${periods.length}).`);
 		periods.push(p);
 		return;
@@ -1246,214 +1256,221 @@ function addPeriod (p) {
 } // End of addPeriod
 
 function calculate() {
+	console.log("calculate:Starting calculations")
+	let CA = data.chosenCA();
+	let endDate = getEndDate();
+
 	resultStatus.innerHTML="";
 	//if (step == salaries[level].length -1) {
 		//console.debug("Top of your level.  This should be easy.");
-		if (dbug) {
-			console.log ("\n\nCalculating:  There are " + periods.length + " periods to be concerned with.");
-			console.log ("With salary: " + salaries[level][step] + ".");
-		}
+		console.debug (`calculate::There are ${periods.length} periods to be concerned with.`);
+		console.debug (`calculate::With salary: $${CA.salaries[level][step]}.`);
+
 		let actingStack = [];
 		let multiplier = 1;
-		let newSalaries = JSON.parse(JSON.stringify(salaries));
-		let newDaily = JSON.parse(JSON.stringify(daily));
-		let newHourly = JSON.parse(JSON.stringify(hourly));
+		let newSalaries = [[]];
+		let newDaily = [[]];
+		let newHourly = [[]];
 		let preTotal = {"made":0, "shouldHaveMade":0, "backpay":0};
 		let pTotal = {"made":0, "shouldHaveMade":0, "backpay":0};
 		let total = {"made":0, "shouldHaveMade":0, "backpay":0};
-		if (dbug) {
-			console.log("prelim checks:");
-			for (let i = 0; i < periods.length; i++) {
-				console.log (periods[i]["type"] + ": " + periods[i]["date"] + ".");
-			}
-		}
+
+		let resultsDiv = document.getElementById("resultsDiv");
+		let resultsBody = document.getElementById("resultsBody");
+		let resultsFoot = document.getElementById("resultsFoot");
+		let resultsTheadTR = document.getElementById("resultsTheadTR");
+
+		console.debug("prelim checks:");
+		for (let i = 0; i < periods.length; i++) { console.debug(`\t${periods[i]["type"]}: ${periods[i]["date"]}.`); }
+
 		for (let i = 0; i < periods.length-1; i++) {
-			console.debug(i + ": " + periods[i]["startDate"] + ":");
-			console.debug(i + ": going between " + periods[i]["startDate"] + " and " + periods[i+1]["startDate"] + " for the type of " + periods[i]["type"] + ".");
-			if (periods[i]["type"].match(/Anniversary Increase/)) {
+			let period = periods[i];
+			let nextPeriod = periods[i+1];
+			console.debug(`${i}: going between ${period["date"]} (${period["type"]}) and ${nextPeriod["date"]} (${nextPeriod["type"]}).`);
+			if (period["type"].match(/Anniversary Increase/)) {
 				let output = "";
-				if (actingStack.length == 0) {
-					if (i == 0) {
+				if (actingStack.length === 0) {
+					if (i === 0) {
 						output += "Not increasing step because this is the first anniversary, and your anniversary is on this date.";
 					} else {
 						output += "Increasing step from " + step + " to ";
-						step = Math.min(parseInt(step) + 1, salaries[level].length-1);
+						step = Math.min(step + 1, CA.salaries[level].length-1);
 						output += step + ".";
 					}
 				} else {
 					output += "Increasing non-acting step from " + actingStack[0]["step"] + " to ";
-					actingStack[0]["step"] = Math.min(parseInt(actingStack[0]["step"]) +1, salaries[actingStack[0]["level"]].length-1);
+					actingStack[0]["step"] = Math.min(parseInt(actingStack[0]["step"]) +1, CA.salaries[actingStack[0]["level"]].length-1);
 					output += actingStack[0]["step"] + ".";
 				}
 				console.debug(output);
-			} else if (periods[i]["type"] == "Acting Anniversary") {
-				var output = "Increasing step from " + step + " to ";
-				step = Math.min(step + 1, salaries[level].length-1);
+			} else if (period["type"] === "Acting Anniversary") {
+				let output = "Increasing step from " + step + " to ";
+				step = Math.min(step + 1, CA.salaries[level].length-1);
 				output += step + "."
 				console.debug(output);
-			} else if (periods[i]["type"] == "promotion") {
-				var currentSal = salaries[level][step];
-				var minNewSal = currentSal * 1.04;
-				level = periods[i]["level"];
-				var looking = true;
-				for (var stp = 0; stp < salaries[level].length && looking; stp++) {
-					if (salaries[level][stp] > minNewSal) {
+			} else if (period["type"] === "promotion") {
+				let currentSal = salaries[level][step];
+				let minNewSal = currentSal * 1.04;
+				level = period["level"];
+				let looking = true;
+				for (let stp = 0; stp < CA.salaries[level].length && looking; stp++) {
+					if (CA.salaries[level][stp] > minNewSal) {
 						step = stp;
 						looking = false;
 					}
 				}
-			} else if (periods[i]["type"] == "Acting Start") {
+			} else if (period["type"] === "Acting Start") {
 				actingStack.push({"level":level, "step":step});
-				var currentSal = salaries[level][step];
-				var minNewSal = currentSal * 1.04;
-				level = periods[i]["level"];
-				var looking = true;
-				for (var stp = 0; stp < salaries[level].length && looking; stp++) {
-					if (salaries[level][stp] > minNewSal) {
+				let currentSal = CA.salaries[level][step];
+				let minNewSal = currentSal * 1.04;
+				level = period["level"];
+				let looking = true;
+				for (let stp = 0; stp < CA.salaries[level].length && looking; stp++) {
+					if (CA.salaries[level][stp] > minNewSal) {
 						step = stp;
 						looking = false;
 					}
 				}
 
-			} else if (periods[i]["type"] == "Acting Finished") {
-				var orig = actingStack.pop();
+			} else if (period["type"] === "Acting Finished") {
+				let orig = actingStack.pop();
 				step = orig["step"];
 				level = orig["level"];
 			}
-			periods[i]["made"] = 0;
-			periods[i]["shouldHaveMade"] = 0;
-			periods[i]["backpay"] = 0;
-			multiplier =(1 + (periods[i]["increase"]/100));
-			console.debug("Multiplier: " + multiplier + ".");
-			if (periods[i]["increase"] > 0) {
-				// Calculate new salaries, dailys, and hourlys
-				for (var l = 0; l < newSalaries.length; l++) {
-					for (var s = 0; s < newSalaries[l].length; s++) {
-						//if (dbug && l == level) console.log ("Multiplying " + newSalaries[l][s] + " * " + multiplier + ".");
-						newSalaries[l][s] = (newSalaries[l][s] * multiplier).toFixed(2);
-						newDaily[l][s] = (newSalaries[l][s] / 260.88); //.toFixed(2);
-						newHourly[l][s] = (newSalaries[l][s] / 1956.6); //.toFixed(2);
-						//if (dbug && l == level) console.log ("And it came to " + newSalaries[l][s] + ".");
-					}
+			period["made"] = 0;
+			period["shouldHaveMade"] = 0;
+			period["backpay"] = 0;
+			multiplier =(1 + (period["increase"]/100));
+			console.debug(`Multiplier: ${multiplier}.`);
+
+			let key = null;
+			for (let rateKey of Object.keys(CA.rates)) {
+				if (rateKey !== "current" && rateKey <= period.date) {
+					key = rateKey;
 				}
-				console.debug("Your annual salary went from " + salaries[level][step] + " to " + newSalaries[level][step] + ".");
 			}
-			var days = 0;
-			if (step >= 0) {
-				console.debug("current period: periods[" + i + "][startDate]: " + periods[i]["startDate"] + ".");
-				console.debug("future period: periods[" + (i+1) + "][startDate]: " + periods[(i+1)]["startDate"] + ".");
-				var dparts = periods[i]["startDate"].match(/(\d\d\d\d)-(\d\d?)-(\d\d?)/);
-				var current = new Date(dparts[1], dparts[2]-1, dparts[3]);
-				parts = periods[i+1]["startDate"].match(/(\d\d\d\d)-(\d\d?)-(\d\d?)/);
-				var future = new Date(parts[1], parts[2]-1, parts[3]);
+			if (!key) {console.error("calculate::No rate object found. Period date before start of contract?")};
+			console.debug(`calculate::Using rates ${key} for period ${period["date"]}`);
+			let baseRate = CA.rates["current"]["salary"];
+			let newRate = CA.rates[key]["salary"];
+
+			console.debug(`Your annual salary went from $${CA.salaries[level][step]} to $${newRate[level][step]["annual"]}.`);
+
+			let days = 0;
+			if (step >= 0) { // TODO: Isn't step *always* > 0 at this point?
+				// TODO: Not needed since this is in the debug message near the start?
+				// console.debug(`current period: periods[${i}][date]:  ${period["date"]}`);
+				// console.debug(`future period: nextPeriod[date]:  ${nextPeriod["date"]}.`);
+				let current = new Date(period["date"]);
+				let future = new Date(nextPeriod["date"]);
 				//future.setDate(future.getDate() - 1);
-				var diff = (future  - current) / day;
-				console.debug("There were " + diff + " days between " + current.getFullYear() + "-" +  (current.getMonth()+1) +"-" + current.getDate() + " and " + future.getFullYear() + "-" + (future.getMonth()+1) + "-" + future.getDate() +".");
+				let diff = (future  - current) / day;
+				console.debug(`There were ${diff} days between ${current.toISODateString()} and ${future.toISODateString()}.`);
 				while (current < future) {
 					//console.debug("Now calculating for day " + current.toString() + ".");
-					if (current.getDay() > 0 && current.getDay() < 6) {	// don't calculate weekends
+					if (current.getUTCDay() > 0 && current.getUTCDay() < 6) {	// don't calculate weekends
 						days++;
-						periods[i]["made"] = periods[i]["made"] + daily[level][step] * periods[i]["multiplier"];	// multiplier is if you were there then or not.
-						periods[i]["shouldHaveMade"] = (periods[i]["shouldHaveMade"] + (newDaily[level][step] * periods[i]["multiplier"]));
+						period["made"] = period["made"] + baseRate[level][step]["daily"] * (period["multiplier"] ?? 1);	// multiplier is if you were there then or not.
+						period["shouldHaveMade"] = (period["shouldHaveMade"] + (newRate[level][step]["daily"] * (period["multiplier"] ?? 1) ));
 					}
-					current.setDate(current.getDate() + parseInt(1));
+					current.setDate(current.getDate() + 1);
 		//			//console.debug("Now day is " + current.toString() + ".");
 				}
 			} else {
-				console.debug(periods[i]["startDate"] + ": Step is still " + step + " therefore, not adding anything to made.");
+				console.debug(`${period["date"]}: Step is still ${step} therefore, not adding anything to made.`);
 			}
-			periods[i]["backpay"] = periods[i]["shouldHaveMade"] - periods[i]["made"];
+			period["backpay"] = period["shouldHaveMade"] - period["made"];
 
-			var newTR = createHTMLElement("tr", {"parentNode":resultsBody});
-			let endDate = new Date(periods[i+1]["startDate"]);
+			let newTR = createHTMLElement("tr", {"parentNode":resultsBody});
+			let endDate = new Date(periods[i+1]["date"]);
 			endDate.setDate(endDate.getDate() -1);
-			var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": periods[i]["startDate"] + " - " + endDate.toISODateString()});
-			var reasonDiv = createHTMLElement("div", {"parentNode":newPaidTD, "textNode":"(" + periods[i]["type"] + ")", "class":"small"});
-			var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(periods[i]["made"])}); //.toFixed(2)});
-			var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(periods[i]["shouldHaveMade"])}); //.toFixed(2)});
-			var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(periods[i]["backpay"])}); //.toFixed(2)});
+			let newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": period["date"] + " - " + endDate.toISODateString()});
+			let reasonDiv = createHTMLElement("div", {"parentNode":newPaidTD, "textNode":"(" + period["type"] + ")", "class":"small"});
+			newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(period["made"])}); //.toFixed(2)});
+			newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(period["shouldHaveMade"])}); //.toFixed(2)});
+			newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(period["backpay"])}); //.toFixed(2)});
 
 			if (dbug || showExtraCols) {
-				var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": "CS-0" + (level +1)});
-				var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": (Math.max(1, (parseInt(step)+1)))});
-				var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": (periods[i]["multiplier"] ? "Yes" : "No")});
-				var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": (step >=0 ? (daily[level][step] * periods[i]["multiplier"]).toFixed(2) + " -> " + (newDaily[level][step] * periods[i]["multiplier"]).toFixed(2) : "0") + " / day"});
-				var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": days});
+				newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": "CS-0" + (level +1)});
+				newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": (Math.max(1, (parseInt(step)+1)))});
+				newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": (period["multiplier"] ? "Yes" : "No")});
+				newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": (step >=0 ? (baseRate[level][step]["daily"] * (period["multiplier"] ?? 1)).toFixed(2) + " -> " + (newRate[level][step]["daily"] * (period["multiplier"] ?? 1)).toFixed(2) : "0") + " / day"});
+				newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": days});
 			}
 			
-			if (overtimePeriods.hasOwnProperty(periods[i]["startDate"])) {
-				console.debug("Yup there are OT for " + periods[i]["startDate"] + ".");
-				for (var rate in overtimePeriods[periods[i]["startDate"]]) {
+			if (overtimePeriods.hasOwnProperty(period["date"])) {
+				console.debug("Yup there are OT for " + period["date"] + ".");
+				for (let rate in overtimePeriods[period["date"]]) {
 					console.debug("rate: " + rate + ".");
-					console.debug("amount: " + overtimePeriods[periods[i]["startDate"]][rate] + ".");
-					var made = overtimePeriods[periods[i]["startDate"]][rate] * hourly[level][step] * rate;
-					var shouldHaveMade = overtimePeriods[periods[i]["startDate"]][rate] * newHourly[level][step] * rate;
-					var backpay = shouldHaveMade - made;
+					console.debug("amount: " + overtimePeriods[period["date"]][rate] + ".");
+					let made = overtimePeriods[period["date"]][rate] * baseRate[level][step]["hourly"] * rate;
+					let shouldHaveMade = overtimePeriods[period["date"]][rate] * newRate[level][step]["hourly"] * rate;
+					let backpay = shouldHaveMade - made;
 					
-					var newTR = createHTMLElement("tr", {"parentNode":resultsBody});
-					var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": periods[i]["startDate"]});
-					var reasonDiv = createHTMLElement("div", {"parentNode":newPaidTD, "textNode":"(Overtime Payment x " + rate + ")", "class":"small"});
-					var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(made)}); //.toFixed(2)});
-					var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(shouldHaveMade)}); //.toFixed(2)});
-					var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(backpay)}); //.toFixed(2)});
+					newTR = createHTMLElement("tr", {"parentNode":resultsBody});
+					newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": period["date"]});
+					reasonDiv = createHTMLElement("div", {"parentNode":newPaidTD, "textNode":"(Overtime Payment x " + rate + ")", "class":"small"});
+					newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(made)}); //.toFixed(2)});
+					newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(shouldHaveMade)}); //.toFixed(2)});
+					newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(backpay)}); //.toFixed(2)});
 
 					if (dbug || showExtraCols) {
-						var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": "CS-0" + (level +1)});
-						var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": parseInt(step)+1});
-						var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": (periods[i]["multiplier"] ? "Yes" : "No")});
-						var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": hourly[level][step] * periods[i]["multiplier"] + " * " + rate + "/hr"});
-						var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": "Hourly " + overtimePeriods[periods[i]["startDate"]][rate]});
+						newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": `${classification}-${level}`});
+						newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": step});
+						newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": (period["multiplier"] ? "Yes" : "No")});
+						newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": baseRate[level][step]["hourly"] * (period["multiplier"] ?? 1) + " * " + rate + "/hr"});
+						newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": "Hourly " + overtimePeriods[period["date"]][rate]});
 					}
 	
-					periods[i]["made"] += made;
-					periods[i]["shouldHaveMade"] += shouldHaveMade;
-					periods[i]["backpay"] += backpay;
+					period["made"] += made;
+					period["shouldHaveMade"] += shouldHaveMade;
+					period["backpay"] += backpay;
 				}
 			} else {
-				console.debug("Nope, there aren't OT for " + periods[i]["startDate"] + ".");
+				console.debug("Nope, there aren't OT for " + period["date"] + ".");
 			}
 			//dbug = false;
 
-			if (lumpSumPeriods.hasOwnProperty(periods[i]["startDate"])) {
-				var made = lumpSumPeriods[periods[i]["startDate"]] * hourly[level][step];
-				var shouldHaveMade = lumpSumPeriods[periods[i]["startDate"]] * newHourly[level][step];
-				var backpay = shouldHaveMade - made;
+			if (lumpSumPeriods.hasOwnProperty(period["date"])) {
+				let made = lumpSumPeriods[period["date"]] * baseRate[level][step]["hourly"];
+				let shouldHaveMade = lumpSumPeriods[period["date"]] * newRate[level][step]["hourly"];
+				let backpay = shouldHaveMade - made;
 				
-				var newTR = createHTMLElement("tr", {"parentNode":resultsBody});
-				var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": periods[i]["startDate"]});
-				var reasonDiv = createHTMLElement("div", {"parentNode":newPaidTD, "textNode":"(Lump Sum Payment)", "class":"small"});
-				var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(made)}); //.toFixed(2)});
-				var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(shouldHaveMade)}); //.toFixed(2)});
-				var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(backpay)}); //.toFixed(2)});
+				newTR = createHTMLElement("tr", {"parentNode":resultsBody});
+				newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": period["date"]});
+				reasonDiv = createHTMLElement("div", {"parentNode":newPaidTD, "textNode":"(Lump Sum Payment)", "class":"small"});
+				newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(made)}); //.toFixed(2)});
+				newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(shouldHaveMade)}); //.toFixed(2)});
+				newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(backpay)}); //.toFixed(2)});
 
 				
 				if (dbug || showExtraCols) {
-					var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": "CS-0" + (level +1)});
-					var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": parseInt(step)+1});
-					var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": (periods[i]["multiplier"] ? "Yes" : "No")});
-					var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": hourly[level][step] * periods[i]["multiplier"] + "/hr"});
-					var newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": "Hourly " + lumpSumPeriods[periods[i]["startDate"]]});
+					newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": "CS-0" + (level +1)});
+					newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": parseInt(step)+1});
+					newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": (period["multiplier"]  ? "Yes" : "No")});
+					newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": baseRate[level][step]["hourly"] * (period["multiplier"] ?? 1) + "/hr"});
+					newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": "Hourly " + lumpSumPeriods[period["date"]]});
 				}
 
-				periods[i]["made"] += made;
-				periods[i]["shouldHaveMade"] += shouldHaveMade;
-				periods[i]["backpay"] += backpay;
+				period["made"] += made;
+				period["shouldHaveMade"] += shouldHaveMade;
+				period["backpay"] += backpay;
 			}
 			
 			/*
-			if (periods[i]["startDate"] < phoenixDateTxt.value) {
-				preTotal["made"] += periods[i]["made"];
-				preTotal["shouldHaveMade"] += periods[i]["shouldHaveMade"];
-				preTotal["backpay"] += periods[i]["backpay"];
+			if (period["date"] < phoenixDateTxt.value) {
+				preTotal["made"] += period["made"];
+				preTotal["shouldHaveMade"] += period["shouldHaveMade"];
+				preTotal["backpay"] += period["backpay"];
 			} else {
-				pTotal["made"] += periods[i]["made"];
-				pTotal["shouldHaveMade"] += periods[i]["shouldHaveMade"];
-				pTotal["backpay"] += periods[i]["backpay"];
+				pTotal["made"] += period["made"];
+				pTotal["shouldHaveMade"] += period["shouldHaveMade"];
+				pTotal["backpay"] += period["backpay"];
 			}
 			*/
-			total["made"] += periods[i]["made"];
-			total["shouldHaveMade"] += periods[i]["shouldHaveMade"];
-			total["backpay"] += periods[i]["backpay"];
+			total["made"] += period["made"];
+			total["shouldHaveMade"] += period["shouldHaveMade"];
+			total["backpay"] += period["backpay"];
 			
 		}
 		if (resultsFoot) {
@@ -1474,11 +1491,11 @@ function calculate() {
 			total["shouldHaveMade"] += preTotal["shouldHaveMade"] + pTotal["shouldHaveMade"];
 			total["backpay"] += preTotal["backpay"] + pTotal["backpay"];
 			*/
-			var totalTR = createHTMLElement("tr", {"parentNode":resultsFoot});
-			var totalTH = createHTMLElement("th", {"parentNode":totalTR, "scope":"row", "nodeText":"Total"});
-			var preTD = createHTMLElement("td", {"parentNode":totalTR, "nodeText": formatter.format(total["made"])});
-			var preTD = createHTMLElement("td", {"parentNode":totalTR, "nodeText": formatter.format(total["shouldHaveMade"])});
-			var preTD = createHTMLElement("td", {"parentNode":totalTR, "nodeText": formatter.format(total["backpay"])});
+			let totalTR = createHTMLElement("tr", {"parentNode":resultsFoot});
+			let totalTH = createHTMLElement("th", {"parentNode":totalTR, "scope":"row", "nodeText":"Total"});
+			let preTD = createHTMLElement("td", {"parentNode":totalTR, "nodeText": formatter.format(total["made"])});
+			preTD = createHTMLElement("td", {"parentNode":totalTR, "nodeText": formatter.format(total["shouldHaveMade"])});
+			preTD = createHTMLElement("td", {"parentNode":totalTR, "nodeText": formatter.format(total["backpay"])});
 		}
 		resultStatus.innerHTML = "Results shown below.";
 	//} else {
@@ -1569,24 +1586,6 @@ function removeChildren (el) {
 	}
 }
 
-function isReady () {
-	if (JSON.stringify(i18n) != "{}" && JSON.stringify(data) != "{}") {
-		if (dbug) {
-			console.log ("Got both");
-			console.log ("Got json: "  + JSON.stringify(data) + ".");
-			console.log ("Got json: "  + JSON.stringify(i18n) + ".");
-		}
-		init();
-	} else {
-		if (JSON.stringify(i18n) == "{}") {
-			console.log ("Didn't get i18n, so must have gotten data.");
-		}
-		if (JSON.stringify(data) === "{}") {
-			console.log ("Didn't get data, so must have gotten i18n.");
-		}
-		
-	}
-} // End of isReader
 
 // #region events
 
@@ -2064,6 +2063,7 @@ function setupEventListeners() {
 	let CASel = document.getElementById("CASelect");
     CASel.addEventListener("change", function () {
         chosenCA = CASel.value;
+		CA = data[group][classification][chosenCA];
         resetSelectors("CASel");
         populateLevelSelect();
 
@@ -2074,7 +2074,7 @@ function setupEventListeners() {
 		calcStartDate.setAttribute("datetime", data.chosenCA().startDate.toISODateString());
 		calcStartDate.innerHTML = data.chosenCA().startDate.toLocaleString("en-CA", { year: 'numeric', month: 'long', day: 'numeric' });
 
-        generateTables(data.chosenCA()); // TODO: Delete old tables when CA changes
+        generateTables(CA); // TODO: Delete old tables when CA changes
     }, false);
 
 	// TODO: If the level changes we want to change the options in the Step selector, but we also want to keep the date
@@ -2116,6 +2116,7 @@ function main() {
 		group="IT Group";
 		classification = "IT";
 		chosenCA = "2021-2025";
+		CA = data[group][classification][chosenCA];
 		level=0;
 		step=0;
 		document.getElementById("startDateTxt").value="2022-01-01";
