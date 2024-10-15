@@ -166,7 +166,7 @@ function oldinit () {
 	/*for (var r in results) {
 		results[r] = document.getElementById(r);
 	}*/
-	if (dbug) console.log("init::MainForm is " + mainForm + ".");
+	console.debug("init::MainForm is " + mainForm + ".");
 	if (levelSel && stepSel && mainForm && startDateTxt && calcBtn && addActingBtn && addPromotionBtn) {
 		console.debug("Adding change event to calcBtn.");
 		levelSel.addEventListener("change", populateSalary, false);
@@ -904,52 +904,59 @@ function getSalary () {
 		console.debug("getSalary::Something's not valid.  Lvl: " + level + ", startDate: " + startDate + ".");
 		addStartDateErrorMessage();
 	}
-	console.log("breakpoint");
 } // End of getSalary
 
 function addPromotions () {
+	let CA = data.chosenCA();
 	// Add promotions
-	var promotions = document.querySelectorAll(".promotions");
-	var numOfPromotions = promotions.length;
-	if (dbug) console.log("addPromotions::Checking for " + numOfPromotions + " promotions.");
-	for (var i = 0; i < promotions.length; i++) {
-		var promoLevel = promotions[i].getElementsByTagName("select")[0].value;
-		if (dbug) console.log("addPromotions::promoLevel " + i + ": " + promoLevel + ".");
-		var promoDate  = promotions[i].getElementsByTagName("input")[0].value.match(/(\d\d\d\d)-(\d\d)-(\d\d)/);
-		if (dbug) console.log("addPromotions::promoDate " + i + ": " + promoDate[0] + ".");
-		if (promoDate) {
-			if (promoDate[0] > TABegin.toISOString().substr(0,10) && promoDate[0] < EndDate.toISOString().substr(0, 10) && promoLevel > 0 && promoLevel <=5) {
-				console.debug("addPromotions::Adding a promotion on " + promoDate[0] + " at level " + promoLevel +".");
+	let promotions = document.querySelectorAll(".promotions");
+	let numOfPromotions = promotions.length;
+	console.debug("addPromotions::Checking for " + numOfPromotions + " promotions.");
+	for (let i = 0; i < promotions.length; i++) {
+		let promoLevel = promotions[i].getElementsByTagName("select")[0].value;
+		console.debug("addPromotions::promoLevel " + i + ": " + promoLevel + ".");
+		// TODO: Why not just parse as date
+		// let promoDate_old  = promotions[i].getElementsByTagName("input")[0].value.match(/(\d\d\d\d)-(\d\d)-(\d\d)/);
+		let promotionDate = new Date(promotions[i].getElementsByTagName("input")[0].value);
+		console.debug("addPromotions::promoDate " + i + ": " + promotionDate + ".");
+		if (promotionDate) {
+			if (promotionDate > CA.startDate && promotionDate < CA.endDate && promoLevel > 0 && promoLevel < CA.levels ) {
+				console.debug("addPromotions::Adding a promotion on " + promotionDate + " at level " + promoLevel +".");
 				// add the promo period
-				var j = addPeriod ({"startDate":promoDate[0],"increase":0, "type":"promotion", "multiplier":1, "level":(promoLevel-1)});
+				let j = addPeriod ({"date":promotionDate.toISODateString(),"type":"promotion", "level":promoLevel});
 				// remove future anniversaries
-				for (var k = j; k < periods.length; k++) {
-					if (periods[k]["type"] == "Anniversary Increase") {
+				// TODO: Does this delete past anniversary increases too?
+				for (let k = j; k < periods.length; k++) {
+					if (periods[k]["type"] === "Anniversary Increase") {
 						periods.splice(k, 1);
 					}
 				}
+				// TODO: Consider extracting anniversaries into another function, it's used in multiple places
 				// add anniversaries
-				var k = parseInt(promoDate[1])+1;
+				let k = promotionDate.getFullYear()+1;
 				console.debug("addPromotions::Starting with promo anniversaries k: " + k + ", and make sure it's <= " + EndDate.getFullYear() + ".");
 				for (k; k <= EndDate.getFullYear(); k++) {
-					console.debug("addPromotions::Adding anniversary date " + k + "-" + promoDate[2] + "-" + promoDate[3] + ".");
-					addPeriod ({"startDate": k + "-" + promoDate[2] + "-" + promoDate[3], "increase":0, "type":"Anniversary Increase", "multiplier":1});
+					let tempDate = new Date (promotionDate);
+					tempDate.setFullYear(k);
+					console.debug(`addPromotions::Adding anniversary date ${tempDate}.`);
+					addPeriod ({"date": tempDate.toISODateString(), "increase":0, "type":"Anniversary Increase", "multiplier":1});
 				}
-				saveValues.push("pdate" + i + "=" + promoDate[0]);
+				saveValues.push("pdate" + i + "=" + promotionDate.toISODateString());
 				saveValues.push("plvl" + i + "=" + promoLevel);
 
 			} else {
 				if (dbug) {
-					if (promoDate[0] > TABegin.toISOString().substr(0,10)) console.log ("addPromotions::It's after the beginning.");
-					if (promoDate[0] < EndDate.toISOString().substr(0, 10)) console.log ("addPromotions::It's before the end.");
+					if (promotionDate > CA.startDate) console.log ("addPromotions::It's after the beginning.");
+					if (promotionDate < CA.endDate) console.log ("addPromotions::It's before the end.");
 					if (promoLevel > 0) console.log ("addPromotions::It's greater than 0.");
 					if (promoLevel < 5) console.log ("addPromotions::It's less than or equal to 5.");
 				}
 			}
 		} else {
-			if (dbug) console.log("addPromotions::Didn't get promoDate.");
+			console.debug("addPromotions::Didn't get promoDate.");
 		}
 	}
+	console.log("Breakpoint");
 } // End of addPromotions
 
 function getActings () {
@@ -962,7 +969,7 @@ function getActings () {
 		var dates = actingStints[i].getElementsByTagName("input");
 		var actingFromDate = dates[0].value;
 		var actingToDate = dates[1].value;
-		if (dbug) console.log("getActings::Checking acting at " + actingLvl + " from " + actingFromDate + " to " + actingToDate + ".");
+		console.debug("getActings::Checking acting at " + actingLvl + " from " + actingFromDate + " to " + actingToDate + ".");
 		if (actingLvl >=0 && actingLvl <5 && actingFromDate.match(/\d\d\d\d-\d\d-\d\d/) && actingToDate.match(/\d\d\d\d-\d\d-\d\d/)) {
 			console.debug("getActings::Passed the initial tests.");
 			if (actingFromDate <= EndDate.toISOString().substr(0, 10) && actingToDate >= TABegin.toISOString().substr(0,10) && actingToDate > actingFromDate) {
@@ -1170,7 +1177,7 @@ function addPeriod (p) {
 				if (overtimePeriods.hasOwnProperty(periods[i - 1]["date"])) {
 					console.debug("Yes.  But does it have anything in rate: " + p["rate"] + "?");
 					if (overtimePeriods[periods[i - 1]["date"]].hasOwnProperty(p["rate"])) {
-						if (dbug) console.log("Yup.  So gonna add " + periods[i - 1]["date"][p["rate"]] + " to " + p["hours"] + ".");
+						console.debug("Yup.  So gonna add " + periods[i - 1]["date"][p["rate"]] + " to " + p["hours"] + ".");
 						overtimePeriods[periods[i - 1]["date"]][p["rate"]] = (overtimePeriods[periods[i - 1]["date"]][p["rate"]] * 1) + (p["hours"] * 1);
 						console.debug("Adding overtime amount to " + periods[i - 1]["date"] + " of " + p["hours"] + " x " + p["rate"] + ".");
 						console.debug("And it came to " + overtimePeriods[periods[i - 1]["date"]][p["rate"]] + ".");
@@ -1242,8 +1249,8 @@ function calculate() {
 				console.log (periods[i]["type"] + ": " + periods[i]["date"] + ".");
 			}
 		}
-		for (var i = 0; i < periods.length-1; i++) {
-			if (dbug) console.log(i + ": " + periods[i]["startDate"] + ":");
+		for (let i = 0; i < periods.length-1; i++) {
+			console.debug(i + ": " + periods[i]["startDate"] + ":");
 			console.debug(i + ": going between " + periods[i]["startDate"] + " and " + periods[i+1]["startDate"] + " for the type of " + periods[i]["type"] + ".");
 			if (periods[i]["type"].match(/Anniversary Increase/)) {
 				var output = "";
@@ -1504,15 +1511,15 @@ function createHTMLElement (type, attribs) {
 
 	var dbug = (arguments.length == 3 &&arguments[2] != null && arguments[2] != false ? true : false);
 	for (var k in attribs) {
-		if (dbug) console.log("Dealing with attrib " + k + ".");
+		console.debug("Dealing with attrib " + k + ".");
 		if (k == "parentNode") {
-			if (dbug) console.log("Dealing with parentnode.");
+			console.debug("Dealing with parentnode.");
 			if (attribs[k] instanceof HTMLElement) {
-				if (dbug) console.log("Appending...");
+				console.debug("Appending...");
 				attribs[k].appendChild(newEl);
 			} else if (attribs[k] instanceof String || typeof(attribs[k]) === "string") {
 				try {
-					if (dbug) console.log("Getting, then appending...");
+					console.debug("Getting, then appending...");
 					document.getElementById(attribs[k]).appendChild(newEl);
 				}
 				catch (er) {
@@ -1520,15 +1527,15 @@ function createHTMLElement (type, attribs) {
 				}
 			}
 		} else if (k == "textNode" || k == "nodeText") {
-			if (dbug) console.log("Dealing with textnode " + attribs[k] + ".");
+			console.debug("Dealing with textnode " + attribs[k] + ".");
 			if (typeof (attribs[k]) == "string") {
-				if (dbug) console.log("As string...");
+				console.debug("As string...");
 				newEl.appendChild(document.createTextNode(attribs[k]));
 			} else if (attribs[k] instanceof HTMLElement) {
-				if (dbug) console.log("As HTML element...");
+				console.debug("As HTML element...");
 				newEl.appendChild(attribs[k]);
 			} else {
-				if (dbug) console.log("As something else...");
+				console.debug("As something else...");
 				newEl.appendChild(document.createTextNode(attribs[k].toString()));
 			}
 		} else {
@@ -1572,7 +1579,7 @@ function addPromotionHandler() {
 	let plvl = null;
 	if (arguments.length > 1) {
 		let args = arguments[1];
-		if (dbug) console.log("addPromotionHandler::arguments: " + arguments.length);
+		console.debug("addPromotionHandler::arguments: " + arguments.length);
 		if (args.hasOwnProperty("toFocus")) toFocus = args["toFocus"];
 		if (args.hasOwnProperty("date")) {
 			pdate = (isValidDate(args["date"]) ? args["date"] : null);
@@ -1581,7 +1588,7 @@ function addPromotionHandler() {
 			plvl = args["level"].replaceAll(/\D/g, "");
 			plvl = (plvl > 0 && plvl < 6 ? plvl : null);
 		}
-		if (dbug) console.log(`addPromotionHandler::toFocus: ${toFocus}, pdate: ${pdate}, plvl: ${plvl}.`);
+		console.debug(`addPromotionHandler::toFocus: ${toFocus}, pdate: ${pdate}, plvl: ${plvl}.`);
 	}
 	let promotionsDiv = document.getElementById("promotionsDiv");
 
