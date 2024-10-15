@@ -1114,32 +1114,35 @@ function getOvertimes () {
 
 function getLumpSums () {
 	// Add LumpSums
-	var lumpsums = document.querySelectorAll(".lumpSums");
-	console.debug("Dealing with " + lumpsums.length + " lumpsums.");
+	// TODO: CA.startDate and the endDate from the form are used everywhere, consider centralizing them?
+	let CA = data.chosenCA();
+	let endDate = parseDateString(document.getElementById("endDateTxt").value);
+	let lumpSums = document.querySelectorAll(".lumpSums");
+	console.debug(`Dealing with ${lumpSums.length} lumpsums.`);
 	
-	for (var i =0; i < lumpsums.length; i++) {
-		var lumpSumDate = lumpsums[i].querySelector("input[type=date]").value;
-		var lumpSumAmount = lumpsums[i].querySelector("input[type=text]").value.replace(/[^\d\.]/, "");
-		if (lumpSumDate.match(/\d\d\d\d-\d\d-\d\d/)) {
+	for (let i =0; i < lumpSums.length; i++) {
+		let lumpSumDate = new Date(lumpSums[i].querySelector("input[type=date]").value);
+		let lumpSumAmount = lumpSums[i].querySelector("input[type=text]").value.replace(/[^\d\.]/, "");
+		if ( ~!isNaN(lumpSumDate.getTime()) ) {
 			console.debug("Passed the initial tests.");
-			if (lumpSumDate >= TABegin.toISODateString() && lumpSumDate <= EndDate.toISODateString() && lumpSumAmount > 0) {
+			if (lumpSumDate >= CA.startDate && lumpSumDate <= endDate && lumpSumAmount > 0) {
 				console.debug("And the dates are in the right range.");
 				// add a period for starting
-				var from = addPeriod({"startDate":lumpSumDate, "increase":0, "type":"Lump Sum", "multiplier":0, "hours":lumpSumAmount});
+				let from = addPeriod({"date":lumpSumDate, "type":"Lump Sum", "multiplier":0, "hours":lumpSumAmount});
 
-				saveValues.push("lsdate" + i + "=" + lumpSumDate);
-				saveValues.push("lsamt" + i + "=" + lumpSumAmount);
+				saveValues.push(`lsdate${i}=${lumpSumDate}`);
+				saveValues.push(`lsamt${i}=${lumpSumAmount}`);
 				
 			} else {
 				if (dbug) {
-					if (lumpSumDate >= TABegin.toISODateString()) console.log ("lumpSumDate is after startDate");
-					if (lumpSumDate <= EndDate.toISODateString()) console.log ("lumpSumDate is before EndDate");
+					if (lumpSumDate >= CA.startDate) console.log ("lumpSumDate is after startDate");
+					if (lumpSumDate <= endDate) console.log ("lumpSumDate is before EndDate");
 					if (lumpSumAmount > 0) console.log ("lumpSumAmount > 0");
 				}
 			}
 		} else {
 			if (dbug) {
-				if (lumpSumDate.match(/\d\d\d\d-\d\d-\d\d/)) console.log ("lumpSumDate is right format.");
+				if ( !isNaN(lumpSumDate.getTime()) ) console.log ("lumpSumDate is right format.");
 			}
 		}
 	}
@@ -1250,17 +1253,17 @@ function calculate() {
 			console.log ("\n\nCalculating:  There are " + periods.length + " periods to be concerned with.");
 			console.log ("With salary: " + salaries[level][step] + ".");
 		}
-		var actingStack = [];
-		var multiplier = 1;
-		var newSalaries = JSON.parse(JSON.stringify(salaries));
-		var newDaily = JSON.parse(JSON.stringify(daily));
-		var newHourly = JSON.parse(JSON.stringify(hourly));
-		var preTotal = {"made":0, "shouldHaveMade":0, "backpay":0};
-		var pTotal = {"made":0, "shouldHaveMade":0, "backpay":0};
-		var total = {"made":0, "shouldHaveMade":0, "backpay":0};
+		let actingStack = [];
+		let multiplier = 1;
+		let newSalaries = JSON.parse(JSON.stringify(salaries));
+		let newDaily = JSON.parse(JSON.stringify(daily));
+		let newHourly = JSON.parse(JSON.stringify(hourly));
+		let preTotal = {"made":0, "shouldHaveMade":0, "backpay":0};
+		let pTotal = {"made":0, "shouldHaveMade":0, "backpay":0};
+		let total = {"made":0, "shouldHaveMade":0, "backpay":0};
 		if (dbug) {
 			console.log("prelim checks:");
-			for (var i = 0; i < periods.length; i++) {
+			for (let i = 0; i < periods.length; i++) {
 				console.log (periods[i]["type"] + ": " + periods[i]["date"] + ".");
 			}
 		}
@@ -1268,9 +1271,9 @@ function calculate() {
 			console.debug(i + ": " + periods[i]["startDate"] + ":");
 			console.debug(i + ": going between " + periods[i]["startDate"] + " and " + periods[i+1]["startDate"] + " for the type of " + periods[i]["type"] + ".");
 			if (periods[i]["type"].match(/Anniversary Increase/)) {
-				var output = "";
+				let output = "";
 				if (actingStack.length == 0) {
-					if (i ==0) {
+					if (i == 0) {
 						output += "Not increasing step because this is the first anniversary, and your anniversary is on this date.";
 					} else {
 						output += "Increasing step from " + step + " to ";
