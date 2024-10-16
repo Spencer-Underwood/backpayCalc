@@ -87,11 +87,11 @@ Date.prototype.toString = function() {
 // 	if (dbug || showExtraCols) {
 // 		var ths = resultsTheadTR.getElementsByTagName("th");
 // 		if (ths.length == 4) {
-// 			createHTMLElement("th", {"parentNode":resultsTheadTR, "scope":"col", "textNode":"Level"});
-// 			createHTMLElement("th", {"parentNode":resultsTheadTR, "scope":"col", "textNode":"Step"});
-// 			createHTMLElement("th", {"parentNode":resultsTheadTR, "scope":"col", "textNode":"There?"});
-// 			createHTMLElement("th", {"parentNode":resultsTheadTR, "scope":"col", "textNode":"Salary"});
-// 			createHTMLElement("th", {"parentNode":resultsTheadTR, "scope":"col", "textNode":"Working Days"});
+// 			createHTMLElement("th", {parentNode:resultsTheadTR, "scope":"col", "textNode":"Level"});
+// 			createHTMLElement("th", {parentNode:resultsTheadTR, "scope":"col", "textNode":"Step"});
+// 			createHTMLElement("th", {parentNode:resultsTheadTR, "scope":"col", "textNode":"There?"});
+// 			createHTMLElement("th", {parentNode:resultsTheadTR, "scope":"col", "textNode":"Salary"});
+// 			createHTMLElement("th", {parentNode:resultsTheadTR, "scope":"col", "textNode":"Working Days"});
 // 		}
 // 	}
 // 	/*for (var r in results) {
@@ -121,7 +121,7 @@ function populateGroupSelect (bookmarkGroup = null) {
 	// This *should* only ever run once
 	let groupSel = document.getElementById("groupSelect");
 	for (const group in data) {
-		let attributes = { "parentNode": groupSel, "textNode": group, "value": group};
+		let attributes = { parentNode: groupSel, "textNode": group, value: group};
 		if (group === bookmarkGroup) { attributes["selected"] = true; } // Add something for the bookmarks
 		createHTMLElement("option", attributes);
 	}
@@ -132,7 +132,7 @@ function populateClassificationSelect (bookmarkClassification = null) {
 	let classSel = document.getElementById("classificationSelect");
 	classSel.length = 1;
 	for (const classifications in data[group]) {
-		let attributes = { "parentNode": classSel, "textNode": classifications};
+		let attributes = { parentNode: classSel, "textNode": classifications};
 		if (bookmarkClassification === classifications) { attributes["selected"] = true; }
 		createHTMLElement("option", attributes);
 	}
@@ -149,7 +149,7 @@ function populateCASelect(bookmarkCA = null) {
 	let CASel = document.getElementById("CASelect");
 	CASel.length = 1;
 	for (const CA in data[group][classification]) {
-		let attributes = { "parentNode": CASel, "textNode": CA};
+		let attributes = { parentNode: CASel, "textNode": CA};
 		if (CA === bookmarkCA) { attributes["selected"] = true; }
 		createHTMLElement("option", attributes);
 	}
@@ -159,7 +159,7 @@ function populateLevelSelect(bookmarkLevel = null){
 	let levelSel = document.getElementById("levelSelect");
 	levelSel.length = 1;
     for (let i = 0; i < CA.levels; i++) {
-		let attributes = {"parentNode": levelSel, "textNode": `${classification}-${i + 1}`, "value": i};
+		let attributes = {parentNode: levelSel, "textNode": `${classification}-${i + 1}`, value: i};
 		if (i === bookmarkLevel) { attributes["selected"] = true; }
 		createHTMLElement("option", attributes);
     }
@@ -170,7 +170,7 @@ function populateStepSelect(bookmarkStep = null){
 	let steps =  CA.salaries[level];
 
 	for (let i = 0; i < steps.length; i++) {
-		let attributes = {"parentNode": stepSel, "textNode": `Step ${i+1} - ${ getNum(steps[i]) }`, "value": i};
+		let attributes = {parentNode: stepSel, "textNode": `Step ${i+1} - ${ getNum(steps[i]) }`, value: i};
 		if (i === Number(bookmarkStep) ){
 			attributes["selected"] = true;
 		}
@@ -377,10 +377,10 @@ function generateTables(CA) {
 			let infoSect = createHTMLElement("section", {"parentNode" : newYearSect/*, "insertBefore" : respDiv*/});
 			createHTMLElement("h5", {"parentNode" : infoSect, "textNode" : getStr("info")});
 			let infoDL = createHTMLElement("dl", {"parentNode" : infoSect});
-			createHTMLElement("dt", {"parentNode":infoDL, "textNode" : getStr("payrateIncr")});
-			createHTMLElement("dd", {"parentNode":infoDL, "textNode" : payPeriod.increments[level]+ " %"});
-			createHTMLElement("dt", {"parentNode":infoDL, "textNode" : getStr("payrateTotalIncr")});
-			createHTMLElement("dd", {"parentNode":infoDL, "textNode" : payPeriod.compounded[level] + " %"});
+			createHTMLElement("dt", {parentNode:infoDL, "textNode" : getStr("payrateIncr")});
+			createHTMLElement("dd", {parentNode:infoDL, "textNode" : payPeriod.increments[level]+ " %"});
+			createHTMLElement("dt", {parentNode:infoDL, "textNode" : getStr("payrateTotalIncr")});
+			createHTMLElement("dd", {parentNode:infoDL, "textNode" : payPeriod.compounded[level] + " %"});
         }
     }
 	console.info("Generated tables for:", CA);
@@ -559,42 +559,14 @@ function saveValue (e) {
 function setURL () {
 	let url = new URL(document.location);
 	let newURL = url.toString().replace(/#.*$/, "");
+
+	let form = document.querySelector("#mainForm");
+	let formData = new FormData(form); // Collect form data
+
 	newURL = newURL.replace(/\?.*$/, "");
-	//let params = [];
-	/*for (let id in filters) {
-		if (!filters[id].checked) {
-			params.push(id.replace("Chk", ""));
-			if (id.match(/levelA/)) {
-				params[params.length-1] += "$";
-			}
-		}
-	}*/
-	/*
-	if (levelSel) saveValues["lvl"] = levelSel.selectedIndex);
-	if (startDateTxt.value) ("strtdt=" +  startDateTxt.value);
-	if (stepSel) params.push("stp=" +  stepSel.selectedIndex);
-	if (endDateTxt.value) params.push("enddt=" +  endDateTxt.value);
-
-	newURL += "?" + params.join("&");
-	*/
 	newURL += "?";
-	/*saveValues.forEach(function (val, key, saveValues) {
-		console.log ("adding " + key + "=" + val);
-		newURL += key + "=" + val + "&";
-		});
-	newURL = newURL.substring(0, newURL.length - 1);
-	*/
 	newURL += saveValues.join("&");
-	/*
-	if (params.length > 0) {
-		newURL += "?filters=" + params.join(sep) + (selectedTab != "" ? "&" + selectedTab : "") + url.hash;
-	} else {
-		newURL += (selectedTab != "" ? "?" + selectedTab : "") + url.hash;
-	}
-	*/
 	history.pushState({}, document.title, newURL);
-	
-
 } // End of setURL
 
 /*
@@ -604,9 +576,9 @@ function populateSalary () {
 	let startDateTxt = document.getElementById("startDateTxt");
 	removeChildren(stepSel);
 	if (levelSel.value >0 && levelSel.value <= 5) {
-		createHTMLElement("option", {"parentNode":stepSel, "value":"-1", "textNode":"Select Salary"});
+		createHTMLElement("option", {parentNode:stepSel, value:"-1", "textNode":"Select Salary"});
 		for (var i = 0; i < salaries[(levelSel.value-1)].length; i++) {
-			createHTMLElement("option", {"parentNode":stepSel, "value":i, "textNode":"$" + salaries[levelSel.value-1][i].toLocaleString()});
+			createHTMLElement("option", {parentNode:stepSel, value:i, "textNode":"$" + salaries[levelSel.value-1][i].toLocaleString()});
 		}
 	}
 	// TODO: Replace this with reference to new guess step by date function
@@ -700,11 +672,11 @@ function startProcess () {
 
 	if (resultsBody) { removeChildren (resultsBody); } else {
 		let resultsTable = document.getElementById("resultsTable");
-		createHTMLElement("tbody", {"parentNode":resultsTable, "id":"resultsBody"});
+		createHTMLElement("tbody", {parentNode:resultsTable, id:"resultsBody"});
 	}
 	if (resultsFoot) { removeChildren (resultsFoot); } else {
 		let resultsTable = document.getElementById("resultsTable");
-		createHTMLElement("tfoot", {"parentNode":resultsTable, "id":"resultsFoot"});
+		createHTMLElement("tfoot", {parentNode:resultsTable, id:"resultsFoot"});
 	}
 
 	let errorDivs = document.querySelectorAll(".error");
@@ -763,8 +735,8 @@ function getSalary () {
 	console.debug("getSalary:: Starting level is:", level); // and start date of " + startDate + ".");
 	if (level < 0 || level >= CA.levels) {	// Should only happen if someone messes with the querystring
 		console.error("getSalary::Error: level is out of bounds.");
-		let errDiv = createHTMLElement("div", {"parentNode":levelSelect.parentNode, "id":"levelSelectError", "class":"error"});
-		createHTMLElement("span", {"parentNode":errDiv, "nodeText":"Please select a level"});
+		let errDiv = createHTMLElement("div", {parentNode:levelSelect.parentNode, id:"levelSelectError", class:"error"});
+		createHTMLElement("span", {parentNode:errDiv, nodeText:"Please select a level"});
 		levelSelect.setAttribute("aria-describedby", "levelSelectError");
 		levelSelect.focus();
 		//return; //TODO: cancel processing if level is out of bounds
@@ -784,7 +756,7 @@ function getSalary () {
 
 		//This used to be below adding anniversaries, but some anniversaries were being missed
 		console.debug("getSalary::About to set endDate to:", endDate);
-		addPeriod ({"date" : endDate.toISODateString(), "type":"End"});
+		addPeriod ({"date" : endDate.toISODateString(), type:"End"});
 
 		//add anniversary's
 		//dbug = true;
@@ -810,7 +782,7 @@ function getSalary () {
 			// TODO: consider what to do with pre-start work periods
 			// remove all older periods?? Maybe?  Or just somehow make them 0s?
 			// This one makes the multipliers 0.
-			addPeriod ({"date" : startDate.toISODateString(), "type":"Starting"});
+			addPeriod ({"date" : startDate.toISODateString(), type:"Starting"});
 			for (let i = 0; i < periods.length; i++) {
 				if (startDate.toISODateString() > periods[i]["date"]){ periods[i]["multiplier"] = 0; }
 			}
@@ -818,7 +790,7 @@ function getSalary () {
 			// This one removes the ones before start date.
 			// This _sounds_ good, but it totally messes up the compounding raises later.
 			/*
-			addPeriod ({"startDate" : startDate.toISODateString(), "increase":0, "type":"Starting", "multiplier":1});
+			addPeriod ({"startDate" : startDate.toISODateString(), "increase":0, type:"Starting", "multiplier":1});
 			do {
 				periods.shift();
 			} while (periods[0]["startDate"] <= startDate.toISODateString() && periods[0]["type"] != "Starting");
@@ -862,7 +834,7 @@ function addPromotions () {
 			if (promotionDate > CA.startDate && promotionDate < CA.endDate && promoLevel > 0 && promoLevel < CA.levels ) {
 				console.debug("addPromotions::Adding a promotion on " + promotionDate + " at level " + promoLevel +".");
 				// add the promo period
-				let j = addPeriod ({"date":promotionDate.toISODateString(),"type":"promotion", "level":promoLevel});
+				let j = addPeriod ({"date":promotionDate.toISODateString(),type:"promotion", "level":promoLevel});
 				// remove future anniversaries
 				// TODO: Does this delete past anniversary increases too?
 				for (let k = j; k < periods.length; k++) {
@@ -878,7 +850,7 @@ function addPromotions () {
 					let tempDate = new Date (promotionDate);
 					tempDate.setFullYear(k);
 					console.debug(`addPromotions::Adding anniversary date ${tempDate}.`);
-					addPeriod ({"date": tempDate.toISODateString(), "type":"Anniversary Increase"});
+					addPeriod ({"date": tempDate.toISODateString(), type:"Anniversary Increase"});
 				}
 				saveValues.push("pdate" + i + "=" + promotionDate.toISODateString());
 				saveValues.push("plvl" + i + "=" + promoLevel);
@@ -918,24 +890,24 @@ function getActings () {
 				// if (actingFromDate < CA.startDate && actingToDate >= CA.startDate )  { actingFromDate = CA.startDate; } // TODO: Wasn't in the original, verify still needed
 				console.debug("getActings::And the dates are in the right range.");
 				// add a period for starting
-				let from = addPeriod({"startDate":actingFromDate.toISODateString() , "type":"Acting Start", "level":actingLvl});
+				let from = addPeriod({"startDate":actingFromDate.toISODateString() , type:"Acting Start", "level":actingLvl});
 
 				// add a period for returning
 				actingToDate.setDate(actingToDate.getDate() +1); // TODO: Verify that day +1 is needed
-				let to = addPeriod({"startDate":actingToDate.toISODateString(), "type":"Acting Finished"});
+				let to = addPeriod({"startDate":actingToDate.toISODateString(), type:"Acting Finished"});
 				let fromParts = actingFromDate.match(/(\d\d\d\d)-(\d\d)-(\d\d)/);
 				actingFromDate = new Date(fromParts[1], (fromParts[2]-1), fromParts[3]);
 				
 				for (let j = parseInt(fromParts[1])+1; j < toParts[1]; j++) {
 					if (j + "-" + fromParts[2] + "-" + fromParts[3] < actingToDate.toISODateString()) {
-						addPeriod({"date":j + "-" + fromParts[2] + "-" + fromParts[3], "type":"Acting Anniversary"});
+						addPeriod({"date":j + "-" + fromParts[2] + "-" + fromParts[3], type:"Acting Anniversary"});
 					}
 				}
 
 				// TODO: Test to see if getUtcMonth and GetUTCDate are needed. Date, probably. Month, maybe?
 				for (let year = actingFromDate.getFullYear() + 1; year < actingToDate.getFullYear(); year++) {
 					let anniversaryDate = new Date(Date.UTC(year, actingFromDate.getUTCMonth(), actingFromDate.getUTCDate()));
-					if (anniversaryDate < actingToDate) { addPeriod({ "date": anniversaryDate.toISODateString(), "type": "Acting Anniversary"}); }
+					if (anniversaryDate < actingToDate) { addPeriod({ "date": anniversaryDate.toISODateString(), type: "Acting Anniversary"}); }
 				}
 
 				saveValues.push("afrom" + i + "=" + actingFromDate.toISODateString());
@@ -978,11 +950,11 @@ function getLWoPs () {
 				if (lwopFromDate <= endDate && lwopToDate > endDate) { lwopToDate = endDate; }
 				console.debug("getLWoPs::And the dates are in the right range.");
 				// add a period for starting
-				let from = addPeriod({"date":lwopFromDate.toISODateString(), "type":"LWoP Start", "multiplier":0});
+				let from = addPeriod({"date":lwopFromDate.toISODateString(), type:"LWoP Start", "multiplier":0});
 
 				// add a period for returning
 				lwopToDate.setDate(lwopToDate.getDate() +1); // TODO: Verify this +1 day is required
-				let to = addPeriod({"date":lwopToDate.toISODateString(), "type":"LWoP Finished"});
+				let to = addPeriod({"date":lwopToDate.toISODateString(), type:"LWoP Finished"});
 				for (let j = from; j < to; j++) {
 					periods[j]["multiplier"] = 0;
 				}
@@ -1024,7 +996,7 @@ function getOvertimes () {
 				console.debug("overtimes::And the dates are in the right range.");
 				// add a period for starting
 				
-				addPeriod({"start":overtimeDate.toISODateString(), "type":"Overtime", "multiplier":0, "hours":overtimeAmount, "rate":overtimeRate});
+				addPeriod({"start":overtimeDate.toISODateString(), type:"Overtime", "multiplier":0, "hours":overtimeAmount, "rate":overtimeRate});
 				saveValues.push(`otdate${i}=${overtimeDate}`);
 				saveValues.push(`otamt${i}=${overtimeAmount}`);
 				saveValues.push(`otrt${i}=${overtimeRate}`);
@@ -1059,7 +1031,7 @@ function getLumpSums () {
 			if (lumpSumDate >= CA.startDate && lumpSumDate <= endDate && lumpSumAmount > 0) {
 				console.debug("And the dates are in the right range.");
 				// add a period for starting
-				let from = addPeriod({"date":lumpSumDate, "type":"Lump Sum", "multiplier":0, "hours":lumpSumAmount});
+				let from = addPeriod({"date":lumpSumDate, type:"Lump Sum", "multiplier":0, "hours":lumpSumAmount});
 
 				saveValues.push(`lsdate${i}=${lumpSumDate}`);
 				saveValues.push(`lsamt${i}=${lumpSumAmount}`);
@@ -1301,21 +1273,21 @@ function calculate() {
 			}
 			period["backpay"] = period["shouldHaveMade"] - period["made"];
 
-			let newTR = createHTMLElement("tr", {"parentNode":resultsBody});
+			let newTR = createHTMLElement("tr", {parentNode:resultsBody});
 			let endDate = new Date(periods[i+1]["date"]);
 			endDate.setDate(endDate.getDate() -1);
-			let newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": period["date"] + " - " + endDate.toISODateString()});
-			let reasonDiv = createHTMLElement("div", {"parentNode":newPaidTD, "textNode":"(" + period["type"] + ")", "class":"small"});
-			newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(period["made"])}); //.toFixed(2)});
-			newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(period["shouldHaveMade"])}); //.toFixed(2)});
-			newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(period["backpay"])}); //.toFixed(2)});
+			let newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": period["date"] + " - " + endDate.toISODateString()});
+			let reasonDiv = createHTMLElement("div", {parentNode:newPaidTD, "textNode":"(" + period["type"] + ")", class:"small"});
+			newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": formatter.format(period["made"])}); //.toFixed(2)});
+			newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": formatter.format(period["shouldHaveMade"])}); //.toFixed(2)});
+			newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": formatter.format(period["backpay"])}); //.toFixed(2)});
 
 			if (dbug || showExtraCols) {
-				newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": "CS-0" + (level +1)});
-				newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": (Math.max(1, (parseInt(step)+1)))});
-				newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": (period["multiplier"] ? "Yes" : "No")});
-				newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": (step >=0 ? (baseRate[level][step]["daily"] * (period["multiplier"] ?? 1)).toFixed(2) + " -> " + (newRate[level][step]["daily"] * (period["multiplier"] ?? 1)).toFixed(2) : "0") + " / day"});
-				newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": days});
+				newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": "CS-0" + (level +1)});
+				newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": (Math.max(1, (parseInt(step)+1)))});
+				newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": (period["multiplier"] ? "Yes" : "No")});
+				newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": (step >=0 ? (baseRate[level][step]["daily"] * (period["multiplier"] ?? 1)).toFixed(2) + " -> " + (newRate[level][step]["daily"] * (period["multiplier"] ?? 1)).toFixed(2) : "0") + " / day"});
+				newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": days});
 			}
 			
 			if (overtimePeriods.hasOwnProperty(period["date"])) {
@@ -1327,19 +1299,19 @@ function calculate() {
 					let shouldHaveMade = overtimePeriods[period["date"]][rate] * newRate[level][step]["hourly"] * rate;
 					let backpay = shouldHaveMade - made;
 					
-					newTR = createHTMLElement("tr", {"parentNode":resultsBody});
-					newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": period["date"]});
-					reasonDiv = createHTMLElement("div", {"parentNode":newPaidTD, "textNode":"(Overtime Payment x " + rate + ")", "class":"small"});
-					newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(made)}); //.toFixed(2)});
-					newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(shouldHaveMade)}); //.toFixed(2)});
-					newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(backpay)}); //.toFixed(2)});
+					newTR = createHTMLElement("tr", {parentNode:resultsBody});
+					newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": period["date"]});
+					reasonDiv = createHTMLElement("div", {parentNode:newPaidTD, "textNode":"(Overtime Payment x " + rate + ")", class:"small"});
+					newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": formatter.format(made)}); //.toFixed(2)});
+					newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": formatter.format(shouldHaveMade)}); //.toFixed(2)});
+					newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": formatter.format(backpay)}); //.toFixed(2)});
 
 					if (dbug || showExtraCols) {
-						newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": `${classification}-${level}`});
-						newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": step});
-						newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": (period["multiplier"] ? "Yes" : "No")});
-						newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": baseRate[level][step]["hourly"] * (period["multiplier"] ?? 1) + " * " + rate + "/hr"});
-						newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": "Hourly " + overtimePeriods[period["date"]][rate]});
+						newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": `${classification}-${level}`});
+						newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": step});
+						newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": (period["multiplier"] ? "Yes" : "No")});
+						newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": baseRate[level][step]["hourly"] * (period["multiplier"] ?? 1) + " * " + rate + "/hr"});
+						newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": "Hourly " + overtimePeriods[period["date"]][rate]});
 					}
 	
 					period["made"] += made;
@@ -1356,20 +1328,20 @@ function calculate() {
 				let shouldHaveMade = lumpSumPeriods[period["date"]] * newRate[level][step]["hourly"];
 				let backpay = shouldHaveMade - made;
 				
-				newTR = createHTMLElement("tr", {"parentNode":resultsBody});
-				newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": period["date"]});
-				reasonDiv = createHTMLElement("div", {"parentNode":newPaidTD, "textNode":"(Lump Sum Payment)", "class":"small"});
-				newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(made)}); //.toFixed(2)});
-				newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(shouldHaveMade)}); //.toFixed(2)});
-				newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": formatter.format(backpay)}); //.toFixed(2)});
+				newTR = createHTMLElement("tr", {parentNode:resultsBody});
+				newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": period["date"]});
+				reasonDiv = createHTMLElement("div", {parentNode:newPaidTD, "textNode":"(Lump Sum Payment)", class:"small"});
+				newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": formatter.format(made)}); //.toFixed(2)});
+				newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": formatter.format(shouldHaveMade)}); //.toFixed(2)});
+				newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": formatter.format(backpay)}); //.toFixed(2)});
 
 				
 				if (dbug || showExtraCols) {
-					newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": "CS-0" + (level +1)});
-					newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": parseInt(step)+1});
-					newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": (period["multiplier"]  ? "Yes" : "No")});
-					newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": baseRate[level][step]["hourly"] * (period["multiplier"] ?? 1) + "/hr"});
-					newPaidTD = createHTMLElement("td", {"parentNode":newTR, "textNode": "Hourly " + lumpSumPeriods[period["date"]]});
+					newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": "CS-0" + (level +1)});
+					newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": parseInt(step)+1});
+					newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": (period["multiplier"]  ? "Yes" : "No")});
+					newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": baseRate[level][step]["hourly"] * (period["multiplier"] ?? 1) + "/hr"});
+					newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": "Hourly " + lumpSumPeriods[period["date"]]});
 				}
 
 				period["made"] += made;
@@ -1395,27 +1367,27 @@ function calculate() {
 		}
 		if (resultsFoot) {
 			/*
-			var preTotalTR = createHTMLElement("tr", {"parentNode":resultsFoot});
-			var preTH = createHTMLElement("th", {"parentNode":preTotalTR, "scope":"row", "nodeText":"Pre-Phoenix Total"});
-			var preTD = createHTMLElement("td", {"parentNode":preTotalTR, "nodeText":"$" + preTotal["made"].toFixed(2)});
-			var preTD = createHTMLElement("td", {"parentNode":preTotalTR, "nodeText":"$" + preTotal["shouldHaveMade"].toFixed(2)});
-			var preTD = createHTMLElement("td", {"parentNode":preTotalTR, "nodeText":"$" + preTotal["backpay"].toFixed(2)});
+			var preTotalTR = createHTMLElement("tr", {parentNode:resultsFoot});
+			var preTH = createHTMLElement("th", {parentNode:preTotalTR, "scope":"row", nodeText:"Pre-Phoenix Total"});
+			var preTD = createHTMLElement("td", {parentNode:preTotalTR, nodeText:"$" + preTotal["made"].toFixed(2)});
+			var preTD = createHTMLElement("td", {parentNode:preTotalTR, nodeText:"$" + preTotal["shouldHaveMade"].toFixed(2)});
+			var preTD = createHTMLElement("td", {parentNode:preTotalTR, nodeText:"$" + preTotal["backpay"].toFixed(2)});
 
-			var pTotalTR = createHTMLElement("tr", {"parentNode":resultsFoot});
-			var pTH = createHTMLElement("th", {"parentNode":pTotalTR, "scope":"row", "nodeText":"Phoenix Total"});
-			var preTD = createHTMLElement("td", {"parentNode":pTotalTR, "nodeText":"$" + pTotal["made"].toFixed(2)});
-			var preTD = createHTMLElement("td", {"parentNode":pTotalTR, "nodeText":"$" + pTotal["shouldHaveMade"].toFixed(2)});
-			var preTD = createHTMLElement("td", {"parentNode":pTotalTR, "nodeText":"$" + pTotal["backpay"].toFixed(2)});
+			var pTotalTR = createHTMLElement("tr", {parentNode:resultsFoot});
+			var pTH = createHTMLElement("th", {parentNode:pTotalTR, "scope":"row", nodeText:"Phoenix Total"});
+			var preTD = createHTMLElement("td", {parentNode:pTotalTR, nodeText:"$" + pTotal["made"].toFixed(2)});
+			var preTD = createHTMLElement("td", {parentNode:pTotalTR, nodeText:"$" + pTotal["shouldHaveMade"].toFixed(2)});
+			var preTD = createHTMLElement("td", {parentNode:pTotalTR, nodeText:"$" + pTotal["backpay"].toFixed(2)});
 
 			total["made"] += preTotal["made"] + pTotal["made"];
 			total["shouldHaveMade"] += preTotal["shouldHaveMade"] + pTotal["shouldHaveMade"];
 			total["backpay"] += preTotal["backpay"] + pTotal["backpay"];
 			*/
-			let totalTR = createHTMLElement("tr", {"parentNode":resultsFoot});
-			let totalTH = createHTMLElement("th", {"parentNode":totalTR, "scope":"row", "nodeText":"Total"});
-			let preTD = createHTMLElement("td", {"parentNode":totalTR, "nodeText": formatter.format(total["made"])});
-			preTD = createHTMLElement("td", {"parentNode":totalTR, "nodeText": formatter.format(total["shouldHaveMade"])});
-			preTD = createHTMLElement("td", {"parentNode":totalTR, "nodeText": formatter.format(total["backpay"])});
+			let totalTR = createHTMLElement("tr", {parentNode:resultsFoot});
+			let totalTH = createHTMLElement("th", {parentNode:totalTR, "scope":"row", nodeText:"Total"});
+			let preTD = createHTMLElement("td", {parentNode:totalTR, nodeText: formatter.format(total["made"])});
+			preTD = createHTMLElement("td", {parentNode:totalTR, nodeText: formatter.format(total["shouldHaveMade"])});
+			preTD = createHTMLElement("td", {parentNode:totalTR, nodeText: formatter.format(total["backpay"])});
 		}
 		updateResultStatus("Results shown below.");
 	//} else {
@@ -1444,8 +1416,8 @@ function isValidDate (d) {
 function addStartDateErrorMessage () {
 	let startDateTxt = document.getElementById("startDateTxt");
 	console.debug("Error:  st is " + startDateTxt.value + ".");
-	var errDiv = createHTMLElement("div", {"parentNode":startDateTxt.parentNode, "id":"startDateError", "class":"error"});
-	createHTMLElement("p", {"parentNode":errDiv, "nodeText":"Please enter the date at which you started at the level you were at on December 22, 2018. If you weren't a CS at that time, enter the date you started as a CS.  All dates must be in the format of YYYY-MM-DD."});
+	var errDiv = createHTMLElement("div", {parentNode:startDateTxt.parentNode, id:"startDateError", class:"error"});
+	createHTMLElement("p", {parentNode:errDiv, nodeText:"Please enter the date at which you started at the level you were at on December 22, 2018. If you weren't a CS at that time, enter the date you started as a CS.  All dates must be in the format of YYYY-MM-DD."});
 	levelSel.setAttribute("aria-describedby", "startDateError");
 	return;
 }
@@ -1541,19 +1513,19 @@ function addPromotionHandler() {
 	let id = 0;
 	while (document.getElementById("promo" + id)) { id++; }
 
-	let newPromotionFS = createHTMLElement("fieldset", { "parentNode": promotionsDiv, "class": "fieldHolder promotions", "id": "promo" + id});
-	createHTMLElement("legend", {"parentNode": newPromotionFS, "textNode": "Promotion " + (id + 1)});
-	createHTMLElement("label", { "parentNode": newPromotionFS, "for": "promoDate" + id, "nodeText": "Date of promotion: " });
-	let newPromoDate = createHTMLElement("input", { "parentNode": newPromotionFS, "type": "date", "id": "promoDate" + id, "aria-describedby": "dateFormat", "value": (pdate ? pdate : null) });
+	let newPromotionFS = createHTMLElement("fieldset", { parentNode: promotionsDiv, class: "fieldHolder promotions", id: "promo" + id});
+	createHTMLElement("legend", {parentNode: newPromotionFS, "textNode": "Promotion " + (id + 1)});
+	createHTMLElement("label", { parentNode: newPromotionFS, for: "promoDate" + id, nodeText: "Date of promotion: " });
+	let newPromoDate = createHTMLElement("input", { parentNode: newPromotionFS, type: "date", name:"promotion-date-"+id, id: "promoDate" + id, "aria-describedby": "dateFormat", value: (pdate ? pdate : null) });
 	if (toFocus) newPromoDate.focus();
 
-	createHTMLElement("label", { "parentNode": newPromotionFS, "for": "promotionLevel" + id, "nodeText": "Promoted to level: " });
-	let newPromotionSel = createHTMLElement("select", {"parentNode": newPromotionFS, "id": "promotionLevel" + id});
+	createHTMLElement("label", { parentNode: newPromotionFS, for: "promotionLevel" + id, nodeText: "Promoted to level: " });
+	let newPromotionSel = createHTMLElement("select", {parentNode: newPromotionFS, name:"promotion-level-"+id, id: "promotionLevel" + id});
 
 	// TODO: Add bookmarking options somewhere around here
 
 	for (let j = 0; j < CA.levels; j++) {
-		let newPromoOpt = createHTMLElement("option", { "parentNode": newPromotionSel, "value": j, "nodeText": (classification +"-" + (j +1))});
+		let newPromoOpt = createHTMLElement("option", { parentNode: newPromotionSel, value: j, nodeText: (classification +"-" + (j +1))});
 		if (plvl) { if (plvl === j) newPromoOpt.setAttribute("selected", "selected"); }
 		else {
 			if (level + 1 === j) newPromoOpt.setAttribute("selected", "selected");
@@ -1562,19 +1534,19 @@ function addPromotionHandler() {
 
 	let promoButtonsDiv = null;
 	if (id === 0) {
-		promoButtonsDiv = createHTMLElement("div", {"parentNode": newPromotionFS, "id": "promoButtonsDiv"});
+		promoButtonsDiv = createHTMLElement("div", {parentNode: newPromotionFS, id: "promoButtonsDiv"});
 		let newDelPromotionBtn = createHTMLElement("input", {
-			"parentNode": promoButtonsDiv,
-			"type": "button",
-			"value": "Remove",
-			"id": "removePromotionBtn" + id
+			parentNode: promoButtonsDiv,
+			type: "button",
+			value: "Remove",
+			id: "removePromotionBtn" + id
 		});
 		let newAddPromotionBtn = createHTMLElement("input", {
-			"parentNode": promoButtonsDiv,
-			"type": "button",
-			"value": getStr("addAnotherPromotion"),
-			"class": "promotionsBtn",
-			"id": "addPromotionsBtn" + id
+			parentNode: promoButtonsDiv,
+			type: "button",
+			value: getStr("addAnotherPromotion"),
+			class: "promotionsBtn",
+			id: "addPromotionsBtn" + id
 		});
 		newAddPromotionBtn.addEventListener("click", addPromotionHandler, false);
 		newDelPromotionBtn.addEventListener("click", removePromotionDiv, false);
@@ -1615,19 +1587,19 @@ function addActingHandler () {
 	let id = 0;
 	while (document.getElementById("actingLevel"+id) ) { id++; }
 
-	let newActingFS = createHTMLElement("fieldset", {"parentNode":actingsDiv, "class":"fieldHolder actingStints", "id":"acting"+id});
-	createHTMLElement("legend", {"parentNode":newActingFS, "textNode":"Acting Stint " + (id+1)});
+	let newActingFS = createHTMLElement("fieldset", {parentNode:actingsDiv, class:"fieldHolder actingStints", id:"acting"+id});
+	createHTMLElement("legend", {parentNode:newActingFS, textNode:"Acting Stint " + (id+1)});
 
-	createHTMLElement("label", {"parentNode":newActingFS, "textNode":"From", "for":"actingFrom" + id});
-	let newActingFromDate = createHTMLElement("input", {"parentNode":newActingFS, "id":"actingFrom"+id, "type":"date", "aria-describedby":"dateFormat", "value":(afdate ? afdate : null)});
-	createHTMLElement("label", {"parentNode":newActingFS, "textNode":"To", "for":"actingTo"+id});
-	createHTMLElement("input", {"parentNode":newActingFS, "id":"actingTo"+id, "type":"date", "aria-describedby":"dateFormat", "value":(atdate ? atdate : null)});
+	createHTMLElement("label", {parentNode:newActingFS, textNode:"From", for:"actingFrom" + id});
+	let newActingFromDate = createHTMLElement("input", {parentNode:newActingFS, id:"actingFrom"+id, type:"date", "aria-describedby":"dateFormat", value:(afdate ? afdate : null)});
+	createHTMLElement("label", {parentNode:newActingFS, textNode:"To", for:"actingTo"+id});
+	createHTMLElement("input", {parentNode:newActingFS, name:"acting-date-"+id, id:"actingTo"+id, type:"date", "aria-describedby":"dateFormat", value:(atdate ? atdate : null)});
 
-	createHTMLElement("label", {"parentNode":newActingFS, "for":"actingLevel" + id, "nodeText":"Acting Level: "});
-	let newActingSel = createHTMLElement("select", {"parentNode":newActingFS, "id":"actingLevel" + id});
+	createHTMLElement("label", {parentNode:newActingFS, for:"actingLevel" + id, nodeText:"Acting Level: "});
+	let newActingSel = createHTMLElement("select", {parentNode:newActingFS, name:"acting-level-"+id, id:"actingLevel" + id});
 
 	for (let j = 0; j < CA.levels; j++) {
-		let newPromoOpt = createHTMLElement("option", {"parentNode":newActingSel, "value": j, "nodeText":classification + " - " + (j +1) });
+		let newPromoOpt = createHTMLElement("option", {parentNode:newActingSel, value: j, nodeText:classification + " - " + (j +1) });
 		if (alvl) {
 			if (alvl === j) newPromoOpt.setAttribute("selected", "selected");
 		} else {
@@ -1637,9 +1609,9 @@ function addActingHandler () {
 
 	let actingButtonsDiv = null;
 	if (id === 0) {
-		actingButtonsDiv = createHTMLElement("div", {"parentNode":newActingFS, "id":"actingButtonsDiv"});
-		let newDelActingBtn = createHTMLElement("input", {"parentNode":actingButtonsDiv, "type":"button", "value":"Remove", "id": "removeActingBtn"});
-		let newAddActingBtn = createHTMLElement("input", {"parentNode":actingButtonsDiv, "type":"button", "value":"Add another Acting", "class":"actingBtn", "id": "addActingsBtn"});
+		actingButtonsDiv = createHTMLElement("div", {parentNode:newActingFS, id:"actingButtonsDiv"});
+		let newDelActingBtn = createHTMLElement("input", {parentNode:actingButtonsDiv, type:"button", value:"Remove", id: "removeActingBtn"});
+		let newAddActingBtn = createHTMLElement("input", {parentNode:actingButtonsDiv, type:"button", value:"Add another Acting", class:"actingBtn", id: "addActingsBtn"});
 		newAddActingBtn.addEventListener("click", addActingHandler, false);
 		newDelActingBtn.addEventListener("click", removeActingDiv, false);
 	} else {
@@ -1674,19 +1646,19 @@ function addLWoPHandler () {
 	let id = 0;
 	while (document.getElementById("lwopFrom"+id) ) { id++; }
 
-	let newLWoPFS = createHTMLElement("fieldset", {"parentNode":LWoPDiv, "class":"fieldHolder lwopStints", "id":"lwop"+id});
-	createHTMLElement("legend", {"parentNode":newLWoPFS, "textNode":"LWoP Stint " + (id+1)});
+	let newLWoPFS = createHTMLElement("fieldset", {parentNode:LWoPDiv, class:"fieldHolder lwopStints", id:"lwop"+id});
+	createHTMLElement("legend", {parentNode:newLWoPFS, textNode:"LWoP Stint " + (id+1)});
 
-	createHTMLElement("label", {"parentNode":newLWoPFS, "textNode":"From", "for":"lwopFrom" + id});
-	let newLWoPFromDate = createHTMLElement("input", {"parentNode":newLWoPFS, "id":"lwopFrom"+id, "type":"date", "aria-describedby":"dateFormat", "value":(lfrom ? lfrom : null)});
-	createHTMLElement("label", {"parentNode":newLWoPFS, "textNode":"To", "for":"lwopTo"+id});
-	let newLWoPToDate = createHTMLElement("input", {"parentNode":newLWoPFS, "id":"lwopTo"+id, "type":"date", "aria-describedby":"dateFormat", "value" : (lto ? lto : null)});
+	createHTMLElement("label", {parentNode:newLWoPFS, textNode:"From", for:"lwopFrom" + id});
+	let newLWoPFromDate = createHTMLElement("input", {parentNode:newLWoPFS, name:"lwop-from-"+id, id:"lwopFrom"+id, type:"date", "aria-describedby":"dateFormat", value:(lfrom ? lfrom : null)});
+	createHTMLElement("label", {parentNode:newLWoPFS, textNode:"To", for:"lwopTo"+id});
+	let newLWoPToDate = createHTMLElement("input", {parentNode:newLWoPFS, name:"lwop-to-"+id, id:"lwopTo"+id, type:"date", "aria-describedby":"dateFormat", value : (lto ? lto : null)});
 
 	let lwopButtonsDiv = null;
 	if (id === 0) {
-		lwopButtonsDiv = createHTMLElement("div", {"parentNode":newLWoPFS, "id":"lwopButtonsDiv"});
-		let newDelLWoPBtn = createHTMLElement("input", {"parentNode":lwopButtonsDiv, "type":"button", "value":"Remove", "id": "removeLWoPBtn"});
-		let newAddLWoPBtn = createHTMLElement("input", {"parentNode":lwopButtonsDiv, "type":"button", "value":"Add another LWoP", "class":"lwopBtn", "id": "addLWoPsBtn" });
+		lwopButtonsDiv = createHTMLElement("div", {parentNode:newLWoPFS, id:"lwopButtonsDiv"});
+		let newDelLWoPBtn = createHTMLElement("input", {parentNode:lwopButtonsDiv, type:"button", value:"Remove", id: "removeLWoPBtn"});
+		let newAddLWoPBtn = createHTMLElement("input", {parentNode:lwopButtonsDiv, type:"button", value:"Add another LWoP", class:"lwopBtn", id: "addLWoPsBtn" });
 		newAddLWoPBtn.addEventListener("click", addLWoPHandler, false);
 		newDelLWoPBtn.addEventListener("click", removeLWoPDiv, false);
 	} else {
@@ -1724,35 +1696,35 @@ function addOvertimeHandler () {
 	let id = 0;
 	while (document.getElementById("overtimeDate"+id) ) { id++; }
 
-	let newOvertimeFS = createHTMLElement("fieldset", {"parentNode":OvertimeDiv, "class":"fieldHolder overtimes", "id":"ot" + id});
-	createHTMLElement("legend", {"parentNode":newOvertimeFS, "textNode":"Overtime or Standby " + (id+1)});
+	let newOvertimeFS = createHTMLElement("fieldset", {parentNode:OvertimeDiv, class:"fieldHolder overtimes", id:"ot" + id});
+	createHTMLElement("legend", {parentNode:newOvertimeFS, textNode:"Overtime or Standby " + (id+1)});
 
-	let newDateFieldHolder = createHTMLElement("div", {"parentNode":newOvertimeFS, "class":"fieldHolder"});
-	createHTMLElement("label", {"parentNode":newDateFieldHolder, "textNode":"Date of Overtime:", "for":"overtimeDate" + id});
-	let newOvertimeDate = createHTMLElement("input", {"parentNode":newDateFieldHolder, "id":"overtimeDate"+id, "type":"date", "aria-describedby":"dateFormat", "value":(otdate ? otdate : null)});
+	let newDateFieldHolder = createHTMLElement("div", {parentNode:newOvertimeFS, class:"fieldHolder"});
+	createHTMLElement("label", {parentNode:newDateFieldHolder, textNode:"Date of Overtime:", for:"overtimeDate" + id});
+	let newOvertimeDate = createHTMLElement("input", {parentNode:newDateFieldHolder, name:"overtime-date-"+id,  id:"overtimeDate"+id, type:"date", "aria-describedby":"dateFormat", value:(otdate ? otdate : null)});
 
 
-	let newAmountFieldHolder = createHTMLElement("div", {"parentNode":newOvertimeFS, "class":"fieldHolder"});
-	createHTMLElement("label", {"parentNode":newAmountFieldHolder, "textNode":"Hours-worth of overtime", "for":"overtimeAmount" + id});
-	createHTMLElement("input", {"parentNode":newAmountFieldHolder, "id":"overtimeAmount"+id, "type":"text", "value" : (othours ? othours : null)});
+	let newAmountFieldHolder = createHTMLElement("div", {parentNode:newOvertimeFS, class:"fieldHolder"});
+	createHTMLElement("label", {parentNode:newAmountFieldHolder, textNode:"Hours-worth of overtime", for:"overtimeAmount" + id});
+	createHTMLElement("input", {parentNode:newAmountFieldHolder, name:"overtime-amount-"+id, id:"overtimeAmount"+id, type:"text", value: (othours ? othours : null)});
 
-	createHTMLElement("div", {"parentNode":newOvertimeFS, "class":"fieldHolder"});
-	createHTMLElement("label", {"parentNode":newAmountFieldHolder, "textNode":"Overtime Rate:", "for":"overtimeRate" + id});
-	let newOvertimeRate = createHTMLElement("select", {"parentNode":newAmountFieldHolder, "id":"overtimeRate"+id});
+	createHTMLElement("div", {parentNode:newOvertimeFS, class:"fieldHolder"});
+	createHTMLElement("label", {parentNode:newAmountFieldHolder, textNode:"Overtime Rate:", for:"overtimeRate" + id});
+	let newOvertimeRate = createHTMLElement("select", {parentNode:newAmountFieldHolder, name:"overtime-rate-"+id, id:"overtimeRate"+id});
 	let rates = {"0" : "Select Overtime Rate", "0.125" : "1/8x - Standby", "1.0" : "1.0", "1.5" : "1.5", "2.0": "2.0"};
-	createHTMLElement("option", {"parentNode":newOvertimeRate, "value":"0", "nodeText":"Select Overtime Rate"});
+	createHTMLElement("option", {parentNode:newOvertimeRate, value:"0", nodeText:"Select Overtime Rate"});
 
 	for (let r in rates) {
-		let rt = createHTMLElement("option", {"parentNode":newOvertimeRate, "value":r, "nodeText": rates[r]});
+		let rt = createHTMLElement("option", {parentNode:newOvertimeRate, value:r, nodeText: rates[r]});
 		if (otrate && otrate == r) rt.setAttribute("selected", "selected");
 	}
 
 
 	let otButtonsDiv = null;
 	if (id === 0) {
-		otButtonsDiv = createHTMLElement("div", {"parentNode":newOvertimeFS, "id":"otButtonsDiv"});
-		var newDelOvertimeBtn = createHTMLElement("input", {"parentNode":otButtonsDiv, "type":"button", "value":"Remove", "id": "removeOvertimeBtn"});
-		var newAddOvertimeBtn = createHTMLElement("input", {"parentNode":otButtonsDiv, "type":"button", "value":"Add another Overtime", "class":"otBtn", "id": "addOvertimesBtn"});
+		otButtonsDiv = createHTMLElement("div", {parentNode:newOvertimeFS, id:"otButtonsDiv"});
+		let newDelOvertimeBtn = createHTMLElement("input", {parentNode:otButtonsDiv, type:"button", value:"Remove", id: "removeOvertimeBtn"});
+		let newAddOvertimeBtn = createHTMLElement("input", {parentNode:otButtonsDiv, type:"button", value:"Add another Overtime", class:"otBtn", id: "addOvertimesBtn"});
 		newAddOvertimeBtn.addEventListener("click", addOvertimeHandler, false);
 		newDelOvertimeBtn.addEventListener("click", removeOvertimeDiv, false);
 	} else {
@@ -1786,23 +1758,23 @@ function addLumpSumHandler () {
 	let id = 0;
 	while (document.getElementById("lumpSumDate"+id) ) { id++; }
 
-	let newLumpSumFS = createHTMLElement("fieldset", {"parentNode":LumpSumDiv, "class":"fieldHolder lumpSums", "id":"lumpSum" + id});
-	createHTMLElement("legend", {"parentNode":newLumpSumFS, "textNode":"Lump Sum " + (id+1)});
+	let newLumpSumFS = createHTMLElement("fieldset", {parentNode:LumpSumDiv, class:"fieldHolder lumpSums", id:"lumpSum" + id});
+	createHTMLElement("legend", {parentNode:newLumpSumFS, textNode:"Lump Sum " + (id+1)});
 
-	let newDateFieldHolder = createHTMLElement("div", {"parentNode":newLumpSumFS, "class":"fieldHolder"});
-	createHTMLElement("label", {"parentNode":newDateFieldHolder, "textNode":"Date paid out:", "for":"lumpSumDate" + id});
-	let newLumpSumDate = createHTMLElement("input", {"parentNode":newDateFieldHolder, "id":"lumpSumDate"+id, "type":"date", "aria-describedby":"dateFormat", "value" : (lsdate ? lsdate : null)});
+	let newDateFieldHolder = createHTMLElement("div", {parentNode:newLumpSumFS, class:"fieldHolder"});
+	createHTMLElement("label", {parentNode:newDateFieldHolder, textNode:"Date paid out:", for:"lumpSumDate" + id});
+	let newLumpSumDate = createHTMLElement("input", {parentNode:newDateFieldHolder, name:"lumpsum-date-"+id, id:"lumpSumDate"+id, type:"date", "aria-describedby":"dateFormat", value: (lsdate ? lsdate : null)});
 
-	let newAmountFieldHolder = createHTMLElement("div", {"parentNode":newLumpSumFS, "class":"fieldHolder"});
-	createHTMLElement("label", {"parentNode":newAmountFieldHolder, "textNode":"Hours-worth of payout", "for":"lumpSumAmount" + id});
-	let newLumpSumAmount = createHTMLElement("input", {"parentNode":newAmountFieldHolder, "id":"lumpSumAmount"+id, "type":"text", "value" : (lshours ? lshours : "")});
+	let newAmountFieldHolder = createHTMLElement("div", {parentNode:newLumpSumFS, class:"fieldHolder"});
+	createHTMLElement("label", {parentNode:newAmountFieldHolder, textNode:"Hours-worth of payout", for:"lumpSumAmount" + id});
+	let newLumpSumAmount = createHTMLElement("input", {parentNode:newAmountFieldHolder, name:"lumpsum-amount-"+id, id:"lumpSumAmount"+id, type:"text", value: (lshours ? lshours : "")});
 
 
 	let lumpSumButtonsDiv = null;
 	if (id === 0) {
-		lumpSumButtonsDiv = createHTMLElement("div", {"parentNode":newLumpSumFS, "id":"lumpSumButtonsDiv"});
-		let newDelLumpSumBtn = createHTMLElement("input", {"parentNode":lumpSumButtonsDiv, "type":"button", "value":"Remove", "id": "removeLumpSumBtn"});
-		let newAddLumpSumBtn = createHTMLElement("input", {"parentNode":lumpSumButtonsDiv, "type":"button", "value":"Add another LumpSum", "class":"lumpSumBtn", "id": "addLumpSumsBtn"});
+		lumpSumButtonsDiv = createHTMLElement("div", {parentNode:newLumpSumFS, id:"lumpSumButtonsDiv"});
+		let newDelLumpSumBtn = createHTMLElement("input", {parentNode:lumpSumButtonsDiv, type:"button", value:"Remove", id: "removeLumpSumBtn"});
+		let newAddLumpSumBtn = createHTMLElement("input", {parentNode:lumpSumButtonsDiv, type:"button", value:"Add another LumpSum", class:"lumpSumBtn", id: "addLumpSumsBtn"});
 		newAddLumpSumBtn.addEventListener("click", addLumpSumHandler, false);
 		newDelLumpSumBtn.addEventListener("click", removeLumpSumDiv, false);
 	} else {
@@ -1814,8 +1786,8 @@ function addLumpSumHandler () {
 
 
 	/*
-	var newDelLumpSumBtn = createHTMLElement("input", {"parentNode":newLumpSumFS, "type":"button", "value":"Remove", "id": "removeLumpSumBtn" + id});
-	var newAddLumpSumBtn = createHTMLElement("input", {"parentNode":newLumpSumFS, "type":"button", "value":"Add another Lump Sum period", "class":"lumpsumBtn", "id":"addLumpSumsBtn" + id});
+	var newDelLumpSumBtn = createHTMLElement("input", {parentNode:newLumpSumFS, type:"button", value:"Remove", id: "removeLumpSumBtn" + id});
+	var newAddLumpSumBtn = createHTMLElement("input", {parentNode:newLumpSumFS, type:"button", value:"Add another Lump Sum period", class:"lumpsumBtn", id:"addLumpSumsBtn" + id});
 	newAddLumpSumBtn.addEventListener("click", addLumpSumHandler, false);
 	newDelLumpSumBtn.addEventListener("click", removeLumpSumDiv, false);
 	*/

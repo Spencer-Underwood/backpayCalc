@@ -1,143 +1,154 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-	<head>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-		<!-- <meta content="width=device-width,initial-scale=1" name="viewport"> -->
-		<title>Backpay Calculator for TBS Collective Agreements</title>
-		<meta name="dc.title" content="Test of backpayCalc">
-		<meta name="dcterms.title" content="Test of backpayCalc">
-		<link rel="Stylesheet" type="text/css" href="backpayCalc.css" >
-	</head>
-	<body>
-		<ul id="skipLinks">
-			<li><a href="#mainForm">Skip to Main Form</a></li>
-			<!-- <li><a href="#resultsDiv">Skip to Results</a></li> -->
-		</ul>
-		<header>
-			<h1>Backpay Calculator for TBS Collective Agreements</h1>
-		</header>
-		<main>
-		<form id="mainForm" tabindex="-1">
-			<h2>Your Information</h2>
-			<p><strong>Note:</strong> All dates should be formatted as <span id="dateFormat">YYYY-MM-DD</span>.</p>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <!-- <meta content="width=device-width,initial-scale=1" name="viewport"> -->
+    <title>Backpay Calculator for TBS Collective Agreements</title>
+    <meta name="dc.title" content="Test of backpayCalc">
+    <meta name="dcterms.title" content="Test of backpayCalc">
+    <link rel="Stylesheet" type="text/css" href="backpayCalc.css">
+</head>
+<body>
+<ul id="skipLinks">
+    <li><a href="#mainForm">Skip to Main Form</a></li>
+    <!-- <li><a href="#resultsDiv">Skip to Results</a></li> -->
+</ul>
+<header>
+    <h1>Backpay Calculator for TBS Collective Agreements</h1>
+</header>
+<main>
+    <form id="mainForm" tabindex="-1">
+        <h2>Your Information</h2>
+        <p><strong>Note:</strong> All dates should be formatted as <span id="dateFormat">YYYY-MM-DD</span>.</p>
+        <div class="fieldHolder">
+            <label class="form-label" for="groupSelect">Select the group</label>
+            <select class="form-select" name="group" id="groupSelect">
+                <option disabled selected>Select the group</option>
+                <!-- Options will be populated dynamically -->
+            </select>
+        </div>
+        <div class="fieldHolder">
+            <!-- Only display this if the collective agreement has more than one classification -->
+            <label class="form-label" for="classificationSelect">Select the classification</label>
+            <select class="form-select" name="classification" id="classificationSelect">
+                <option disabled selected>Select the classification</option>
+                <!-- Options will be populated dynamically -->
+            </select>
+        </div>
+        <div class="fieldHolder">
+            <label class="form-label" for="CASelect">Select the collective agreement</label>
+            <select class="form-select" name="collective-agreement" id="CASelect">
+                <option disabled selected>Select the collective agreement</option>
+                <!-- Options will be populated dynamically -->
+            </select>
+        </div>
+        <div class="fieldHolder">
+            <label class="form-label" for="levelSelect">Select your level on
+                <time id="levelStartDate">(placeholder)</time>
+                for your substantive position)</label>
+            <select class="form-select" name="level" id="levelSelect">
+                <option disabled selected>Select your level</option>
+                <!-- Options will be populated dynamically -->
+            </select>
+        </div>
+        <div class="fieldHolder">
+            <!-- This field is really only used to figure out when your increment "anniversary" happens. TODO: Adjust selector to only grab month / date? -->
+            <label class="form-label" for="startDateTxt">When did you start at that level?</label>
+            <p id="startDateDesc">For example, if you started as an IT-02 on March 15, 2015, enter <time>2015-03-15</time> </p>
+            <input class="form-control" type="date" name="start-date" id="startDateTxt" aria-describedby="dateFormat startDateDesc" value="" required>
+        </div>
+        <div class="fieldHolder">
+            <label class="form-label" for="stepSelect">Select your salary on <time datetime="2021-12-22" id="calcStartDate">(placeholder)</time> for your substantive position)</label>
+            <select class="form-select"  name="step" id="stepSelect" required>
+                <option disabled selected>Select your step</option>
+                <!-- Options will be populated dynamically -->
+            </select>
+        </div>
+        <div class="fieldHolder">
+            <label class="form-label" for="endDateTxt">When is the last day this should this stop calculating?</label>
+            <input class="form-control" type="date" name="end-date" id="endDateTxt" aria-describedby="endDateFormat dateFormat"
+                   value="2024-02-14">
+            <span id="endDateFormat" class="helper">(ie: either the date you stopped being part of your classification, or when the contract is implemented.)</span>
+        </div>
 
-      <div class="fieldHolder">
-        <label class="form-label" for="groupSelect">Select the group</label>
-        <select class="form-select"  id="groupSelect">
-          <option disabled selected>Select the group</option>
-          <!-- Options will be populated dynamically -->
-        </select>
-      </div>
-      <div class="fieldHolder"> <!-- Only display this if the collective agreement has more than one classification -->
-				<label class="form-label" for="classificationSelect">Select the classification</label>
-				<select class="form-select"  id="classificationSelect">
-          <option disabled selected>Select the classification</option>
-          <!-- Options will be populated dynamically -->
-        </select>
-			</div>
-      <div class="fieldHolder">
-        <label class="form-label" for="CASelect">Select the collective agreement</label>
-        <select class="form-select"  id="CASelect">
-          <option disabled selected>Select the collective agreement</option>
-          <!-- Options will be populated dynamically -->
-        </select>
-      </div>
-			<div class="fieldHolder">
-				<label class="form-label" for="levelSelect">Select your level on <time id="levelStartDate">(placeholder)</time> for your substantive position)</label>
-				<select class="form-select" id="levelSelect">
-					<option disabled selected>Select your level</option>
-					<!-- Options will be populated dynamically -->
-				</select>
-			</div>
-			<div class="fieldHolder">
-				<!-- This field is really only used to figure out when your increment "anniversary" happens. TODO: Adjust selector to only grab month / date? -->
-				<label class="form-label" for="startDateTxt">When did you start at that level?</label>
-				<p id="startDateDesc">For example, if you started as an IT-02 on March 15, 2015, enter<time>2015-03-15</time></p>
-				<input class="form-control" type="date" id="startDateTxt" aria-describedby="dateFormat startDateDesc" value="" required>
-			</div>
-			<div class="fieldHolder">
-				<label class="form-label" for="stepSelect">Select your salary on <time datetime="2021-12-22" id="calcStartDate">(placeholder)</time> for your substantive position)</label>
-				<select class="form-select" id="stepSelect" required>
-					<option disabled selected>Select your step</option>
-					<!-- Options will be populated dynamically -->
-				</select>
-			</div>
-			<div class="fieldHolder">
-				<label class="form-label" for="endDateTxt">When is the last day this should this stop calculating?</label>
-				<input class="form-control" type="date" id="endDateTxt" aria-describedby="endDateFormat dateFormat" value="2024-02-14">
-				<span id="endDateFormat" class="helper">(ie: either the date you stopped being part of your classification, or when the contract is implemented.)</span>
-			</div>
-
-			<fieldset class="border border-black p-2 m-2" id="promotionsFS">
-				<legend>Promotions</legend>
-				<label id="promoDesc">Were you promoted (to another IT level) during this time?  (Promotions to EX should be considered as Leave Without Pay.)</label>
-				<div class="fieldHolder">
-					<button type="button" class="btn btn-success" id="addPromotionBtn" aria-describedby="promoDesc">Add Promotion</button>
-				</div>
-				<div id="promotionsDiv"></div>
-			</fieldset>
-			<fieldset class="border border-black p-2 m-2" id="actingFS">
-				<legend>Acting</legend>
-				<input type="button" class="btn btn-success" id="addActingBtn" value="Add Acting Period">
-				<div id="actingsDiv"></div>
-			</fieldset>
-			<fieldset class="border border-black p-2 m-2" id="LWoPFS">
-				<legend>Leave without Pay</legend>
-				<input type="button" class="btn btn-success" id="addLwopBtn" value="Add LwoP Period">
-				<div id="LWoPDiv"></div>
-			</fieldset>
-			<fieldset class="border border-black p-2 m-2" id="overtimeFS">
-				<legend>Overtime / Standby</legend>
-				<p id="overtimeExp">You don't need to put every single overtime instance in. Just a total of hours for each rate (1.5 or 2.0) for each period.  Example: if you worked for an extra hour every day for a week where your pay rate didn't change, enter any date within that week, and enter 5 for the number of hours, and 1.5x for the rate.</p>
-				<input type="button" class="btn btn-success" id="addOvertimeBtn" value="Add Overtime" aria-describedby="overtimeExp">
-				<div id="overtimeDiv"></div>
-			</fieldset>
-			<fieldset class="border border-black p-2 m-2" id="lumpSumsFS">
-				<legend>Lump Sum Payments</legend>
-				<p id="lumpSumExp">Example: unused vacation cash-out.</p>
-				<input type="button" class="btn btn-success" id="addLumpSumBtn" value="Add Lump Sum Payment" aria-describedby="lumpSumExp">
-				<div id="lumpSumDiv"></div>
-			</fieldset>
-			<div class="fieldHolder">
-				<input type="button" class="btn btn-primary" id="calcBtn" value="Calculate">
-			</div>
-		</form>
-		<div id="resultsDiv" tabindex="-1">
-			<h2>Results</h2>
-			<p>All amounts are gross.  You'll have to figure out your own taxes. (And sometimes your taxes are pretty gross!  Nyuk nyuk nyuk)</p>
-			<table id="resultsTable">
-				<caption>Pay periods</caption>
-				<thead>
-					<tr id="resultsTheadTR">
-						<th scope="col">Period</th>
-						<th scope="col">What You Made</th>
-						<th scope="col">What You Should Have Made</th>
-						<th scope="col">Backpay Amount</th>
-					</tr>
-				</thead>
-				<tbody id="resultsBody">
-				</tbody>
-				<tfoot id="resultsFoot">
-				</tfoot>
-			</table>
-		</div>
-		<section id="payTablesSection">
-			<h2>Pay Rates</h2>
-		</section>
-		</main>
-		<footer>
-			<h2>Note</h2>
-			<p>This calculator was built as a hobby and is provided "as is" as proof-of-concept. There is absolutely no guarantee of accuracy, or officialness. It should be used for interest sakes, not as an authority.</p>
-			<p>See a problem?  Have a suggestion? <a href="https://github.com/andrewnordlund/backpayCalc/issues">Submit an issue</a>.</p>
-			<p>Back to the <a href="index.html">Backpay Calculator</a> home page.</p>
-		<div id="resultStatus" role="status" aria-live="polite" class="invisibleStuff"></div>
-		<dl>
-			<dt>Last Modified:</dt>
-			<dd><time id="lastModTime" datetime="2023-09-19">2023-09-19</time></dd>
-		</dl>
-		</footer>
-	<script type="module" src="backpayCalc.js"></script>
-	</body>
+        <fieldset class="border border-black p-2 m-2" id="promotionsFS">
+            <legend>Promotions</legend>
+            <label id="promoDesc">Were you promoted (to another IT level) during this time? (Promotions to EX should be
+                considered as Leave Without Pay.)</label>
+            <div class="fieldHolder">
+                <button type="button" class="btn btn-success" id="addPromotionBtn" aria-describedby="promoDesc">Add Promotion</button>
+            </div>
+            <div id="promotionsDiv"></div>
+        </fieldset>
+        <fieldset class="border border-black p-2 m-2" id="actingFS">
+            <legend>Acting</legend>
+            <input type="button" class="btn btn-success" id="addActingBtn" value="Add Acting Period">
+            <div id="actingsDiv"></div>
+        </fieldset>
+        <fieldset class="border border-black p-2 m-2" id="LWoPFS">
+            <legend>Leave without Pay</legend>
+            <input type="button" class="btn btn-success" id="addLwopBtn" value="Add LwoP Period">
+            <div id="LWoPDiv"></div>
+        </fieldset>
+        <fieldset class="border border-black p-2 m-2" id="overtimeFS">
+            <legend>Overtime / Standby</legend>
+            <p id="overtimeExp">You don't need to put every single overtime instance in. Just a total of hours for each
+                rate (1.5 or 2.0) for each period. Example: if you worked for an extra hour every day for a week where
+                your pay rate didn't change, enter any date within that week, and enter 5 for the number of hours, and
+                1.5x for the rate.</p>
+            <input type="button" class="btn btn-success" id="addOvertimeBtn" value="Add Overtime"
+                   aria-describedby="overtimeExp">
+            <div id="overtimeDiv"></div>
+        </fieldset>
+        <fieldset class="border border-black p-2 m-2" id="lumpSumsFS">
+            <legend>Lump Sum Payments</legend>
+            <p id="lumpSumExp">Example: unused vacation cash-out.</p>
+            <input type="button" class="btn btn-success" id="addLumpSumBtn" value="Add Lump Sum Payment"
+                   aria-describedby="lumpSumExp">
+            <div id="lumpSumDiv"></div>
+        </fieldset>
+        <div class="fieldHolder">
+            <input type="button" class="btn btn-primary" id="calcBtn" value="Calculate">
+        </div>
+    </form>
+    <div id="resultsDiv" tabindex="-1">
+        <h2>Results</h2>
+        <p>All amounts are gross. You'll have to figure out your own taxes. (And sometimes your taxes are pretty gross! Nyuk nyuk nyuk)</p>
+        <table id="resultsTable">
+            <caption>Pay periods</caption>
+            <thead>
+            <tr id="resultsTheadTR">
+                <th scope="col">Period</th>
+                <th scope="col">What You Made</th>
+                <th scope="col">What You Should Have Made</th>
+                <th scope="col">Backpay Amount</th>
+            </tr>
+            </thead>
+            <tbody id="resultsBody">
+            </tbody>
+            <tfoot id="resultsFoot">
+            </tfoot>
+        </table>
+    </div>
+    <section id="payTablesSection">
+        <h2>Pay Rates</h2>
+    </section>
+</main>
+<footer>
+    <h2>Note</h2>
+    <p>This calculator was built as a hobby and is provided "as is" as proof-of-concept. There is absolutely no guarantee of accuracy, or officialness. It should be used for interest sakes, not as an authority.</p>
+    <p>See a problem? Have a suggestion? <a href="https://github.com/andrewnordlund/backpayCalc/issues">Submit an issue</a>.</p>
+    <p>Back to the <a href="index.html">Backpay Calculator</a> home page.</p>
+    <div id="resultStatus" role="status" aria-live="polite" class="invisibleStuff"></div>
+    <dl>
+        <dt>Last Modified:</dt>
+        <dd>
+            <time id="lastModTime" datetime="2023-09-19">2023-09-19</time>
+        </dd>
+    </dl>
+</footer>
+<script type="module" src="backpayCalc.js"></script>
+</body>
 </html>
 
