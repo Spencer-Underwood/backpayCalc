@@ -362,7 +362,7 @@ function generateTables(CA) {
             createHTMLElement("td", { parentNode: newTR, textNode: "" });
             for (let step = 0; step < payPeriod.salary[level].length; step++) {
                 createHTMLElement("th", { parentNode: newTR, textNode: `${getStr("step")} ${step + 1}`, scope: "col" });
-            } 
+            }
 
             let newTBody = createHTMLElement("tbody", { parentNode: newTable });
             timeps.forEach(t => {
@@ -459,7 +459,7 @@ function handleHash () {
 		}
 		hasHash = true;
 	}
-	
+
 	// Promotions
 	let looking = true;
 	for (let i = 0; i<5 && looking; i++) {
@@ -550,7 +550,7 @@ function saveValue (e) {
 	//saveValues[key] = value;
 	//saveValues.set(key, value);
 
-	
+
 
 	if (updateHash) setURL();
 } // End of saveValue
@@ -786,7 +786,7 @@ function getSalary () {
 			for (let i = 0; i < periods.length; i++) {
 				if (startDate.toISODateString() > periods[i]["date"]){ periods[i]["multiplier"] = 0; }
 			}
-			
+
 			// This one removes the ones before start date.
 			// This _sounds_ good, but it totally messes up the compounding raises later.
 			/*
@@ -897,7 +897,7 @@ function getActings () {
 				let to = addPeriod({"startDate":actingToDate.toISODateString(), type:"Acting Finished"});
 				let fromParts = actingFromDate.match(/(\d\d\d\d)-(\d\d)-(\d\d)/);
 				actingFromDate = new Date(fromParts[1], (fromParts[2]-1), fromParts[3]);
-				
+
 				for (let j = parseInt(fromParts[1])+1; j < toParts[1]; j++) {
 					if (j + "-" + fromParts[2] + "-" + fromParts[3] < actingToDate.toISODateString()) {
 						addPeriod({"date":j + "-" + fromParts[2] + "-" + fromParts[3], type:"Acting Anniversary"});
@@ -937,7 +937,7 @@ function getLWoPs () {
 	let lwopStints = document.querySelectorAll(".lwopStints");
 	let endDate = getEndDate();
 	console.debug(`Dealing with ${lwopStints.length} lwops.`);
-	
+
 	for (let i =0; i < lwopStints.length; i++) {
 		let dates = lwopStints[i].getElementsByTagName("input");
 		let lwopFromDate = new Date(dates[0].value);
@@ -978,7 +978,7 @@ function getLWoPs () {
 		}
 	}
 } // End of getLWoPs
-	
+
 function getOvertimes () {
 	// Add Overtimes
 	let endDate = getEndDate();
@@ -995,7 +995,7 @@ function getOvertimes () {
 			if (overtimeDate >= CA.startDate && overtimeDate <= endDate && overtimeAmount > 0) {
 				console.debug("overtimes::And the dates are in the right range.");
 				// add a period for starting
-				
+
 				addPeriod({"start":overtimeDate.toISODateString(), type:"Overtime", "multiplier":0, "hours":overtimeAmount, "rate":overtimeRate});
 				saveValues.push(`otdate${i}=${overtimeDate}`);
 				saveValues.push(`otamt${i}=${overtimeAmount}`);
@@ -1022,7 +1022,7 @@ function getLumpSums () {
 	let endDate = getEndDate();
 	let lumpSums = document.querySelectorAll(".lumpSums");
 	console.debug(`Dealing with ${lumpSums.length} lumpsums.`);
-	
+
 	for (let i =0; i < lumpSums.length; i++) {
 		let lumpSumDate = new Date(lumpSums[i].querySelector("input[type=date]").value);
 		let lumpSumAmount = lumpSums[i].querySelector("input[type=text]").value.replace(/[^\d\.]/, "");
@@ -1035,7 +1035,7 @@ function getLumpSums () {
 
 				saveValues.push(`lsdate${i}=${lumpSumDate}`);
 				saveValues.push(`lsamt${i}=${lumpSumAmount}`);
-				
+
 			} else {
 				if (dbug) {
 					if (lumpSumDate >= CA.startDate) console.log ("lumpSumDate is after startDate");
@@ -1259,14 +1259,12 @@ function calculate() {
 				let diff = (future  - current) / day;
 				console.debug(`There were ${diff} days between ${current.toISODateString()} and ${future.toISODateString()}.`);
 				while (current < future) {
-					//console.debug("Now calculating for day " + current.toString() + ".");
 					if (current.getUTCDay() > 0 && current.getUTCDay() < 6) {	// don't calculate weekends
 						days++;
 						period["made"] = period["made"] + baseRate[level][step]["daily"] * (period["multiplier"] ?? 1);	// multiplier is if you were there then or not.
 						period["shouldHaveMade"] = (period["shouldHaveMade"] + (newRate[level][step]["daily"] * (period["multiplier"] ?? 1) ));
 					}
 					current.setDate(current.getDate() + 1);
-		//			//console.debug("Now day is " + current.toString() + ".");
 				}
 			} else {
 				console.debug(`${period["date"]}: Step is still ${step} therefore, not adding anything to made.`);
@@ -1289,7 +1287,7 @@ function calculate() {
 				newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": (step >=0 ? (baseRate[level][step]["daily"] * (period["multiplier"] ?? 1)).toFixed(2) + " -> " + (newRate[level][step]["daily"] * (period["multiplier"] ?? 1)).toFixed(2) : "0") + " / day"});
 				newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": days});
 			}
-			
+
 			if (overtimePeriods.hasOwnProperty(period["date"])) {
 				console.debug("Yup there are OT for " + period["date"] + ".");
 				for (let rate in overtimePeriods[period["date"]]) {
@@ -1298,7 +1296,7 @@ function calculate() {
 					let made = overtimePeriods[period["date"]][rate] * baseRate[level][step]["hourly"] * rate;
 					let shouldHaveMade = overtimePeriods[period["date"]][rate] * newRate[level][step]["hourly"] * rate;
 					let backpay = shouldHaveMade - made;
-					
+
 					newTR = createHTMLElement("tr", {parentNode:resultsBody});
 					newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": period["date"]});
 					reasonDiv = createHTMLElement("div", {parentNode:newPaidTD, "textNode":"(Overtime Payment x " + rate + ")", class:"small"});
@@ -1313,7 +1311,7 @@ function calculate() {
 						newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": baseRate[level][step]["hourly"] * (period["multiplier"] ?? 1) + " * " + rate + "/hr"});
 						newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": "Hourly " + overtimePeriods[period["date"]][rate]});
 					}
-	
+
 					period["made"] += made;
 					period["shouldHaveMade"] += shouldHaveMade;
 					period["backpay"] += backpay;
@@ -1321,13 +1319,12 @@ function calculate() {
 			} else {
 				console.debug("Nope, there aren't OT for " + period["date"] + ".");
 			}
-			//dbug = false;
 
 			if (lumpSumPeriods.hasOwnProperty(period["date"])) {
 				let made = lumpSumPeriods[period["date"]] * baseRate[level][step]["hourly"];
 				let shouldHaveMade = lumpSumPeriods[period["date"]] * newRate[level][step]["hourly"];
 				let backpay = shouldHaveMade - made;
-				
+
 				newTR = createHTMLElement("tr", {parentNode:resultsBody});
 				newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": period["date"]});
 				reasonDiv = createHTMLElement("div", {parentNode:newPaidTD, "textNode":"(Lump Sum Payment)", class:"small"});
@@ -1335,7 +1332,7 @@ function calculate() {
 				newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": formatter.format(shouldHaveMade)}); //.toFixed(2)});
 				newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": formatter.format(backpay)}); //.toFixed(2)});
 
-				
+
 				if (dbug || showExtraCols) {
 					newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": "CS-0" + (level +1)});
 					newPaidTD = createHTMLElement("td", {parentNode:newTR, "textNode": parseInt(step)+1});
@@ -1348,41 +1345,13 @@ function calculate() {
 				period["shouldHaveMade"] += shouldHaveMade;
 				period["backpay"] += backpay;
 			}
-			
-			/*
-			if (period["date"] < phoenixDateTxt.value) {
-				preTotal["made"] += period["made"];
-				preTotal["shouldHaveMade"] += period["shouldHaveMade"];
-				preTotal["backpay"] += period["backpay"];
-			} else {
-				pTotal["made"] += period["made"];
-				pTotal["shouldHaveMade"] += period["shouldHaveMade"];
-				pTotal["backpay"] += period["backpay"];
-			}
-			*/
+
 			total["made"] += period["made"];
 			total["shouldHaveMade"] += period["shouldHaveMade"];
 			total["backpay"] += period["backpay"];
-			
+
 		}
 		if (resultsFoot) {
-			/*
-			var preTotalTR = createHTMLElement("tr", {parentNode:resultsFoot});
-			var preTH = createHTMLElement("th", {parentNode:preTotalTR, "scope":"row", nodeText:"Pre-Phoenix Total"});
-			var preTD = createHTMLElement("td", {parentNode:preTotalTR, nodeText:"$" + preTotal["made"].toFixed(2)});
-			var preTD = createHTMLElement("td", {parentNode:preTotalTR, nodeText:"$" + preTotal["shouldHaveMade"].toFixed(2)});
-			var preTD = createHTMLElement("td", {parentNode:preTotalTR, nodeText:"$" + preTotal["backpay"].toFixed(2)});
-
-			var pTotalTR = createHTMLElement("tr", {parentNode:resultsFoot});
-			var pTH = createHTMLElement("th", {parentNode:pTotalTR, "scope":"row", nodeText:"Phoenix Total"});
-			var preTD = createHTMLElement("td", {parentNode:pTotalTR, nodeText:"$" + pTotal["made"].toFixed(2)});
-			var preTD = createHTMLElement("td", {parentNode:pTotalTR, nodeText:"$" + pTotal["shouldHaveMade"].toFixed(2)});
-			var preTD = createHTMLElement("td", {parentNode:pTotalTR, nodeText:"$" + pTotal["backpay"].toFixed(2)});
-
-			total["made"] += preTotal["made"] + pTotal["made"];
-			total["shouldHaveMade"] += preTotal["shouldHaveMade"] + pTotal["shouldHaveMade"];
-			total["backpay"] += preTotal["backpay"] + pTotal["backpay"];
-			*/
 			let totalTR = createHTMLElement("tr", {parentNode:resultsFoot});
 			let totalTH = createHTMLElement("th", {parentNode:totalTR, "scope":"row", nodeText:"Total"});
 			let preTD = createHTMLElement("td", {parentNode:totalTR, nodeText: formatter.format(total["made"])});
@@ -1392,7 +1361,7 @@ function calculate() {
 		updateResultStatus("Results shown below.");
 	//} else {
 		//console.debug("Not the top of your level.  This should be difficult.");
-		
+
 
 	//}
 } // End of calculate
@@ -1481,7 +1450,7 @@ function createHTMLElement (type, attribs) {
 
 function removeChildren (el) {
 	var dbug = (arguments.length == 2 && arguments[1] != null && arguments[1] != false ? true : false);
-	while (el.firstChild) {	
+	while (el.firstChild) {
 		el.removeChild(el.firstChild);
 	}
 }
