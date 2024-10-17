@@ -533,7 +533,53 @@ function validateDynamicSections(containerId, errors, startDate, endDate) {
     });
 } // End of validateDynamicSections
 
-function displayErrors(){}
+function addErrorMessage(inID, errMsg) {
+    const el = document.getElementById(inID);
+
+    if (el) {
+        console.debug(`addErrorMessage::Adding error for ${inID}: ${errMsg}`);
+        let errDiv = null;
+        errDiv = document.getElementById(`${inID}Error`);
+
+        // Create the error message container only if it doesn't exist
+        if (!errDiv) {
+            errDiv = createHTMLElement("div", { parentNode: el.parentNode, id: `${inID}Error`, class: "error" });
+            el.parentNode.insertBefore(errDiv, el.nextSibling); // Insert the error message directly below the input field
+        }
+        createHTMLElement("p", { parentNode: errDiv, textNode: errMsg });
+
+        // Update the aria-describedby attribute for accessibility
+        if (el.hasAttribute("aria-describedby")) { el.setAttribute("aria-describedby", `${el.getAttribute("aria-describedby")} ${inID}Error`); }
+        else { el.setAttribute("aria-describedby", `${inID}Error`); }
+    } else {
+        console.error(`addErrorMessage::Couldn't get element ${inID}`);
+    }
+} // End of addErrorMessage
+
+function removeErrorMessage(inID) {
+    const inputEl = document.getElementById(inID);
+    const errorEl = document.getElementById(`${inID}Error`);
+
+    if (!inputEl) { console.error(`removeErrorMessage::Couldn't get element ${inID}.`); return; }
+    if (!errorEl) { console.error(`removeErrorMessage::Couldn't get element ${inID}Error.`); return; }
+
+    // Update the aria-describedby attribute to remove the error reference
+    if (inputEl.hasAttribute("aria-describedby")) {
+        let ariaDesc = inputEl.getAttribute("aria-describedby").split(' ').filter(desc => desc !== `${inID}Error`).join(' ').trim();
+
+        if (ariaDesc) { inputEl.setAttribute("aria-describedby", ariaDesc); }
+        else { inputEl.removeAttribute("aria-describedby"); }
+    }
+    errorEl.remove();
+} // End of removeErrorMessage
+
+function displayErrors(errors) {
+    // Add error messages for fields with current errors
+    Object.keys(errors).forEach(fieldId => {
+        const errMsg = errors[fieldId];
+        addErrorMessage(fieldId, errMsg);
+    });
+}
 
 function startProcess(){}
 //endregion
@@ -600,11 +646,16 @@ function setupEventListeners() {
     document.getElementById('addPromotionBtn').addEventListener('click', () => { addSectionHandler("promotion", {}); }, false);
 
 	document.getElementById("calcBtn").addEventListener("click", function(event) {
+        // Clear all existing error messages before validating
+        document.querySelectorAll(".error").forEach(errorEl => {
+            const fieldId = errorEl.id.replace("Error", "");
+            removeErrorMessage(fieldId);
+        });
+
         const validationResult = validateForm();
         if (!validationResult.isValid) {
             event.preventDefault(); // Stop form submission if validation fails
             // alert("Please correct the errors in the form.");
-            console.error(validationResult.errors);
             displayErrors(validationResult.errors);
         } else {
             // Proceed with calculations
