@@ -4,6 +4,7 @@
 import {data} from "./raiseInfo.js";
 import {i18n} from "./i18n.js";
 
+//#region variables
 let dbug = true;
 // Collective Agreement variables
 let group = null;
@@ -14,8 +15,9 @@ let level = -1;
 let step = -1;
 
 let lang = "en"
+//endregion
 
-// Helper functions
+//#region Helpers
 Date.prototype.toISODateString = function() {
 	return this.toISOString().split('T')[0];
 };
@@ -68,7 +70,6 @@ function createHTMLElement (type, attribs) {
 	}
 	return newEl;
 } // End of createHTMLElement
-
 
 
 function getStr (str) {
@@ -138,202 +139,249 @@ function getEndDate() {
 } // End of getStartDate
 
 function parseDateString(dateString) {
-	console.debug("parseDateString:: Initial date string:", dateString);
+    // Extract year, month, day directly
+    const [year, month, day] = dateString.split('-').map(Number);
 
-	const match = dateString.match(/(\d{4})-(\d{2})-(\d{2})/);
-	console.debug("parseDateString:: Got match:", match);
-
-	if (!match) return false;
-
-	const [_, year, month, day] = match;
-	// Create a new Date object based on extracted values
-	return new Date(year, month - 1, day);
-} // End of parseDateString
-
-function isValidDate (d) {
-	let rv = false;
-	try {
-		if (!typeof(d) == "String") d = d.toString();
-		let dateRE = /(\d\d\d\d)-(\d\d)-(\d\d)/;
-		let dparts = d.match(dateRE);
-		d = new Date(dparts[1], dparts[2]-1, dparts[3]);
-
-		if (d >= CA.startDate.getUTCFullYear() && d<= CA.endDate.getUTCFullYear()) rv = true;
-	}
-	catch (ex) {
-		console.error ("Something went wrong: " + ex.toString());
-	}
-	return rv;
-} // End of isValidDate
-
-// Sections Stuff
-function handleArguments(args) {
-	let settings = { date: null, from: null, to: null, level: null, hours: "", rate: null };
-
-	if (args) {
-		settings = {...settings, ...args};
-		if (settings.date && !isValidDate(settings.date)) { settings.date = null; }
-		if (settings.from && !isValidDate(settings.from)) { settings.from = null; }
-		if (settings.to && !isValidDate(settings.to)) { settings.to = null; }
-		if (settings.level) { settings.level = settings.level.replace(/\D/g, ""); }
-		// Ensure hours is empty string if it fails validation or is not provided
-		if (settings.hours) { settings.hours = settings.hours.replace(/\D/g, ""); }
-		else { settings.hours = ""; }
-	}
-
-	return settings;
+    // Create and validate the Date object
+    const date = new Date(year, month - 1, day);
+    return isNaN(date.getTime()) ? false : date;
 }
+//endregion
 
 function addSectionHandler(type, args) {
-	const settings = handleArguments(args);
-	const containerId = `${type}Div`;
-	const containerDiv = document.getElementById(containerId);
-
-	let id = 0;
-	while (document.getElementById(`${type}Date${id}`) || document.getElementById(`${type}From${id}`)) { id++;	}
-
-	const addButton = document.getElementById(`add${type.charAt(0).toUpperCase() + type.slice(1)}Btn`);
-	if (addButton) { addButton.style.display = 'none'; }
-
-	// Create new fieldset within the containerDiv
-	const newFS = createHTMLElement("fieldset", { parentNode: containerDiv, class: `fieldHolder ${type}s`, id: `${type}${id}` });
-	createHTMLElement("legend", { parentNode: newFS, textNode: `${type.charAt(0).toUpperCase() + type.slice(1)} ${id + 1}` });
-
-	if (type === "lwop") {
-		createHTMLElement("label", { parentNode: newFS, for: `${type}From${id}`, textNode: `From date of ${type}: ` });
-		createHTMLElement("input", { parentNode: newFS, type: "date", name: `${type}-from-${id}`, id: `${type}From${id}`, "aria-describedby": "dateFormat", value: settings.from });
-
-		createHTMLElement("label", { parentNode: newFS, for: `${type}To${id}`, textNode: `To date of ${type}: ` });
-		createHTMLElement("input", { parentNode: newFS, type: "date", name: `${type}-to-${id}`, id: `${type}To${id}`, "aria-describedby": "dateFormat", value: settings.to });
-	} else {
-		createHTMLElement("label", { parentNode: newFS, for: `${type}Date${id}`, textNode: `Date of ${type}: ` });
-		createHTMLElement("input", { parentNode: newFS, type: "date", name: `${type}-date-${id}`, id: `${type}Date${id}`, "aria-describedby": "dateFormat", value: settings.date });
-
-		if (type === "promotion" || type === "acting") {
-			createHTMLElement("label", { parentNode: newFS, for: `${type}Level${id}`, textNode: `${type} Level: ` });
-			const newSelect = createHTMLElement("select", {parentNode: newFS, name: `${type}-level-${id}`, id: `${type}Level${id}` });
-			for (let j = 0; j < CA.levels; j++) {
-				const option = createHTMLElement("option", { parentNode: newSelect, value: j, textNode: `${classification} - ${j + 1}` });
-				if (settings.level && settings.level == j) option.setAttribute("selected", "selected");
-			}
+    // Initialize settings with default values for each field (date, from, to, level, hours, rate)
+	let settings = { date: null, from: null, to: null, level: null, hours: "", rate: null };
+    if (args) {
+		// Merge provided arguments into settings, overriding defaults where applicable
+        settings = { ...settings, ...args };
+		// Inline date validation for settings.date, settings.from, and settings.to
+		if (settings.date) {
+			const date = new Date(settings.date);
+			if (isNaN(date.getTime()) || date < CA.startDate || date > CA.endDate) { settings.date = null; }
 		}
-
-		if (type === "overtime" || type === "lumpsum") {
-			createHTMLElement("label", { parentNode: newFS, for: `${type}Amount${id}`, textNode: `Hours-worth of ${type}: ` });
-			createHTMLElement("input", { parentNode: newFS, type: "text", name: `${type}-amount-${id}`, id: `${type}Amount${id}`, value: settings.hours });
-
-			if (type === "overtime") {
-				createHTMLElement("label", { parentNode: newFS, for: `${type}Rate${id}`, textNode: "Overtime Rate:" });
-				const newRateSelect = createHTMLElement("select", { parentNode: newFS, name: `${type}-rate-${id}`, id: `${type}Rate${id}` });
-				const rates = { "0": "Select Overtime Rate", "0.125": "1/8x - Standby", "1.0": "1.0", "1.5": "1.5", "2.0": "2.0" };
-				for (let r in rates) {
-					const rate = createHTMLElement("option", { parentNode: newRateSelect, value: r, textNode: rates[r] });
-					if (settings.rate && settings.rate == r) rate.setAttribute("selected", "selected");
-				}
-			}
+		if (settings.from) {
+			const fromDate = new Date(settings.from);
+			if (isNaN(fromDate.getTime()) || fromDate < CA.startDate || fromDate > CA.endDate) { settings.from = null; }
 		}
-	}
+		if (settings.to) {
+			const toDate = new Date(settings.to);
+			if (isNaN(toDate.getTime()) || toDate < CA.startDate || toDate > CA.endDate) { settings.to = null; }
+		}
+        if (settings.level) { settings.level = settings.level.replace(/\D/g, ""); }
+        // Ensure hours is an empty string if it fails validation or is not provided
+        if (settings.hours) { settings.hours = settings.hours.replace(/\D/g, ""); }
+        else { settings.hours = ""; }
+    }
 
-	createButtonsDiv(id, newFS, type);
+    const containerDiv = document.getElementById(`${type}Div`);
+
+    let id = 0;
+    while (document.getElementById(`${type}Date${id}`) || document.getElementById(`${type}From${id}`)) { id++; }
+
+    const addButton = document.getElementById(`add${capitalizeFirstLetter(type)}Btn`);
+    if (addButton) { addButton.style.display = 'none'; }
+
+    // Create new fieldset within the containerDiv
+    const newFS = createHTMLElement("fieldset", { parentNode: containerDiv, class: `fieldHolder ${type}s`, id: `${type}${id}` });
+    createHTMLElement("legend", { parentNode: newFS, textNode: `${capitalizeFirstLetter(type)} ${id + 1}` });
+
+    // Internal helper functions for adding fields
+    function addInputField(labelText, inputAttributes) {
+        createHTMLElement("label", { parentNode: newFS, for: inputAttributes.id, textNode: labelText });
+        createHTMLElement("input", { parentNode: newFS, ...inputAttributes });
+    }
+
+    function addLWOPFields() {
+        addInputField(`From date of ${type}: `, {
+            type: "date",
+            name: `${type}-from-${id}`,
+            id: `${type}From${id}`,
+            "aria-describedby": "dateFormat",
+            value: settings.from
+        });
+        addInputField(`To date of ${type}: `, {
+            type: "date",
+            name: `${type}-to-${id}`,
+            id: `${type}To${id}`,
+            "aria-describedby": "dateFormat",
+            value: settings.to
+        });
+    }
+
+    function addDateField() {
+        addInputField(`Date of ${type}: `, {
+            type: "date",
+            name: `${type}-date-${id}`,
+            id: `${type}Date${id}`,
+            "aria-describedby": "dateFormat",
+            value: settings.date
+        });
+    }
+
+    function addLevelSelect() {
+        createHTMLElement("label", { parentNode: newFS, for: `${type}Level${id}`, textNode: `${capitalizeFirstLetter(type)} Level: ` });
+        const newSelect = createHTMLElement("select", { parentNode: newFS, name: `${type}-level-${id}`, id: `${type}Level${id}` });
+
+        for (let j = 0; j < CA.levels; j++) {
+            const option = createHTMLElement("option", { parentNode: newSelect, value: j, textNode: `${classification} - ${j + 1}` });
+            if (settings.level && settings.level === j) { option.setAttribute("selected", "selected"); }
+        }
+    }
+
+    function addHoursField() {
+        addInputField(`Hours-worth of ${type}: `, {
+            type: "text",
+            name: `${type}-amount-${id}`,
+            id: `${type}Amount${id}`,
+            value: settings.hours
+        });
+    }
+
+    function addRateSelect() {
+        createHTMLElement("label", { parentNode: newFS, for: `${type}Rate${id}`, textNode: "Overtime Rate:" });
+        const newRateSelect = createHTMLElement("select", { parentNode: newFS, name: `${type}-rate-${id}`, id: `${type}Rate${id}` });
+        const rates = { "0": "Select Overtime Rate", "0.125": "1/8x - Standby", "1.0": "1.0", "1.5": "1.5", "2.0": "2.0" };
+
+        for (let r in rates) {
+            const rate = createHTMLElement("option", { parentNode: newRateSelect, value: r, textNode: rates[r] });
+            if (settings.rate && settings.rate === r) rate.setAttribute("selected", "selected");
+        }
+    }
+
+    // Internal function to create buttons for the section
+    function createButtonsDiv() {
+        let buttonsDiv = null;
+        if (id === 0) {
+            buttonsDiv = createHTMLElement("div", { parentNode: newFS, id: `${type}ButtonsDiv` });
+            let newDelBtn = createHTMLElement("input", { parentNode: buttonsDiv, type: "button", value: "Remove", id: `remove${type}Btn${id}` });
+            let newAddBtn = createHTMLElement("input", { parentNode: buttonsDiv, type: "button", value: `Add another ${type}`, class: `${type}Btn`, id: `add${type}sBtn${id}` });
+            newAddBtn.addEventListener("click", () => addSectionHandler(type, {}), false);
+            newDelBtn.addEventListener("click", (e) => removeSectionDiv(e.target), false);
+        } else {
+            buttonsDiv = document.getElementById(`${type}ButtonsDiv`);
+            newFS.appendChild(buttonsDiv);
+        }
+    }
+
+    // Internal function to remove a section
+    function removeSectionDiv(target) {
+        const sectionElement = target.closest(`.${type}s`);
+        if (!sectionElement) return;
+
+        const id = parseInt(sectionElement.id.replace(type, ""), 10);
+        let buttonsDiv = document.getElementById(`${type}ButtonsDiv`);
+        let previousSection = null;
+
+        if (id > 0) {
+            previousSection = document.getElementById(`${type}${id - 1}`);
+            if (previousSection) previousSection.appendChild(buttonsDiv);
+        }
+        sectionElement.parentNode.removeChild(sectionElement);
+
+        // Show the "Add period" button again if the last section was removed
+        const containerDiv = document.getElementById(`${type}Div`);
+        const remainingSections = containerDiv.querySelectorAll(`.fieldHolder.${type}s`).length;
+        const addButton = document.getElementById(`add${capitalizeFirstLetter(type)}Btn`);
+        if (remainingSections === 0 && addButton) {
+            addButton.style.display = 'inline';
+        }
+    }
+
+    // Call specific handlers for type-specific field creation
+    if (type === "lwop") {
+        addLWOPFields();
+    } else if (type === "promotion" || type === "acting") {
+        addDateField();
+        addLevelSelect();
+    } else if (type === "overtime" || type === "lumpsum") {
+        addDateField();
+        addHoursField();
+        if (type === "overtime") {
+            addRateSelect();
+        }
+    }
+
+    // Create buttons div to add/remove sections
+    createButtonsDiv();
 }
 
-function createButtonsDiv(id, parentNode, type) {
-	let buttonsDiv = null;
-	if (id === 0) {
-		buttonsDiv = createHTMLElement("div", { parentNode, id: type + "ButtonsDiv" });
-		let newDelBtn = createHTMLElement("input", { parentNode: buttonsDiv, type: "button", value: "Remove", id: "remove" + type + "Btn" + id });
-		let newAddBtn = createHTMLElement("input", { parentNode: buttonsDiv, type: "button", value: "Add another " + type, class: type + "Btn", id: "add" + type + "sBtn" + id });
-		newAddBtn.addEventListener("click", () => addSectionHandler(type, {}), false);
-		newDelBtn.addEventListener("click", (e) => removeSectionDiv(e.target, type), false);
-	} else {
-		buttonsDiv = document.getElementById(type + "ButtonsDiv");
-		parentNode.appendChild(buttonsDiv);
-	}
-}
+//#region Dropdowns
+function populateSelect(selectElement, options, bookmarkValue = null, placeholder = "Select an option", autoSelectSingle = false) {
+	// Clear out existing options, but keep the placeholder
+	selectElement.length = 1;
+	selectElement.options[0].text = placeholder;
 
-function removeSectionDiv(target, type) {
-	const sectionElement = target.closest(`.${type}s`);
-	if (!sectionElement) return;
-
-	const id = parseInt(sectionElement.id.replace(type, ""), 10);
-	let buttonsDiv = document.getElementById(type + "ButtonsDiv");
-	let previousSection = null;
-
-	if (id > 0) {
-		previousSection = document.getElementById(type + (id - 1));
-		if (previousSection) previousSection.appendChild(buttonsDiv);
-	}
-	sectionElement.parentNode.removeChild(sectionElement);
-
-	// Show the "add period" button again if the last section was removed
-	const containerDiv = document.getElementById(`${type}Div`);
-	const remainingSections = containerDiv.querySelectorAll(`.fieldHolder.${type}s`).length;
-	const addButton = document.getElementById(`add${type.charAt(0).toUpperCase() + type.slice(1)}Btn`);
-	if (remainingSections === 0 && addButton) { addButton.style.display = 'inline';	}
-}
-
-
-// Dropdown Selectors
-function populateGroupSelect (bookmarkGroup = null) {
-	// This *should* only ever run once
-	let groupSel = document.getElementById("groupSelect");
-	for (const group in data) {
-		let attributes = { parentNode: groupSel, "textNode": group, value: group};
-		if (group === bookmarkGroup) { attributes["selected"] = true; } // Add something for the bookmarks
+	// Add options to the dropdown
+	options.forEach(option => {
+		const attributes = { parentNode: selectElement, textNode: option.text, value: option.value };
+		if (bookmarkValue !== null && bookmarkValue !== undefined && bookmarkValue === option.value) { attributes["selected"] = true; }
 		createHTMLElement("option", attributes);
+	});
+
+	// If there is exactly one option and autoSelectSingle is true, select it automatically
+	if (autoSelectSingle && options.length === 1) {
+		selectElement.selectedIndex = 1; // Select the first (and only) non-placeholder option
+		// Trigger the next step if applicable (e.g., populateCASelect)
+		selectElement.dispatchEvent(new Event("change"));
 	}
+}
+
+// Populate Group Select
+function populateGroupSelect(bookmarkGroup = null) {
+    const groupSel = document.getElementById("groupSelect");
+    const groups = Object.keys(data).map(group => ({ text: group, value: group }));
+    populateSelect(groupSel, groups, bookmarkGroup, "Select the group");
 } // End of populateGroupSelect
 
-function populateClassificationSelect (bookmarkClassification = null) {
-	// When this function is invoked, clear out the dropdown and populate it with the new options.
-	let classSel = document.getElementById("classificationSelect");
-	classSel.length = 1;
-	for (const classifications in data[group]) {
-		let attributes = { parentNode: classSel, "textNode": classifications};
-		if (bookmarkClassification === classifications) { attributes["selected"] = true; }
-		createHTMLElement("option", attributes);
-	}
-	// If there's exactly one classification, select it and skip to the CA selector
-	if ( Object.keys(data[group]).length === 1) {
-		classSel.selectedIndex = 1;
-		classification=classSel.value;
-		populateCASelect();
-	}
+// Populate Classification Select
+function populateClassificationSelect(bookmarkClassification = null) {
+    const classSel = document.getElementById("classificationSelect");
+    const classifications = Object.keys(data[group]).map(cls => ({ text: cls, value: cls }));
+    populateSelect(classSel, classifications, bookmarkClassification, "Select the classification", true);
 } // End of populateClassificationSelect
 
+// Populate Collective Agreement (CA) Select
 function populateCASelect(bookmarkCA = null) {
-	// Delete all options and create new options every time  this is invoked.
-	let CASel = document.getElementById("CASelect");
-	CASel.length = 1;
-	for (const CA in data[group][classification]) {
-		let attributes = { parentNode: CASel, "textNode": CA};
-		if (CA === bookmarkCA) { attributes["selected"] = true; }
-		createHTMLElement("option", attributes);
-	}
-} // End of populateCASelect
+    const CASel = document.getElementById("CASelect");
+    const CAs = Object.keys(data[group][classification]).map(ca => ({ text: ca, value: ca }));
+    populateSelect(CASel, CAs, bookmarkCA, "Select the collective agreement", true);
+} // End of Collective
 
-function populateLevelSelect(bookmarkLevel = null){
-	let levelSel = document.getElementById("levelSelect");
-	levelSel.length = 1;
-    for (let i = 0; i < CA.levels; i++) {
-		let attributes = {parentNode: levelSel, "textNode": `${classification}-${i + 1}`, value: i};
-		if (i === bookmarkLevel) { attributes["selected"] = true; }
-		createHTMLElement("option", attributes);
-    }
+// Populate Level Select
+function populateLevelSelect(bookmarkLevel = null) {
+    const levelSel = document.getElementById("levelSelect");
+    const levels = Array.from({ length: CA.levels }, (_, i) => ({ text: `${classification}-${i + 1}`, value: i }));
+    populateSelect(levelSel, levels, bookmarkLevel, "Select your level");
 } // End of populateLevelSelect
 
-function populateStepSelect(bookmarkStep = null){
-	let stepSel = document.getElementById("stepSelect");
-	let steps =  CA.salaries[level];
-
-	for (let i = 0; i < steps.length; i++) {
-		let attributes = {parentNode: stepSel, "textNode": `Step ${i+1} - ${ getNum(steps[i]) }`, value: i};
-		if (i === Number(bookmarkStep) ){
-			attributes["selected"] = true;
-		}
-		createHTMLElement("option", attributes);
-    }
+// Populate Step Select
+function populateStepSelect(bookmarkStep = null) {
+    const stepSel = document.getElementById("stepSelect");
+    const steps = CA.salaries[level].map((salary, i) => ({ text: `Step ${i + 1} - ${getNum(salary)}`, value: i }));
+    populateSelect(stepSel, steps, bookmarkStep, "Select your step");
 } // End of populateStepSelect
+
+function guessStepByStartDate() {
+    // Ensure CA and level are selected before proceeding
+    if (!CA || isNaN(level) || level < 0 || level >= CA.levels) {
+        console.error("guessStepByStartDate:: Missing or invalid CA/level:", { CA, level });
+        return;
+    }
+    const startDate = getStartDate();
+
+    const timeDiff = (CA.startDate - startDate) / (24 * 60 * 60 * 1000);
+    const years = Math.floor(timeDiff / 365);
+
+    // Set appropriate calculated start date in the DOM
+    const calcStartDate = document.getElementById("calcStartDate");
+    const dateToUse = timeDiff < 0 ? startDate : CA.startDate;
+    calcStartDate.setAttribute("datetime", dateToUse.toISOString().split('T')[0]);
+    calcStartDate.innerHTML = dateToUse.toLocaleString("en-CA", { year: 'numeric', month: 'long', day: 'numeric' });
+
+    // Determine step and update the dropdown
+    const step = timeDiff < 0 ? 1 : Math.min(years, CA.salaries[level].length - 1);
+    document.getElementById("stepSelect").selectedIndex = step + 1;
+} // End of guessStepByStartDate
 
 // Only a convenience function for the group / level / etc selectors. Do not use elsewhere, won't work as expected!
 function resetSelectors(selector){
@@ -355,6 +403,7 @@ function resetSelectors(selector){
 		case "CASel" :
 			levelSel.selectedIndex = 0;
 			levelSel.length = 1;
+			clearDynamicSections(["actingDiv", "promotionDiv"]);
 			/* falls through */
 		case "levelSel" :
 			stepSel.selectedIndex = 0;
@@ -363,67 +412,186 @@ function resetSelectors(selector){
 		case "stepSel" :
 			break;
 	}
+
+	// Inline helper function to clear out dynamic sections by their container IDs
+    function clearDynamicSections(sectionIds) {
+        sectionIds.forEach(id => {
+            const container = document.getElementById(id);
+            while (container.firstChild) {
+                container.removeChild(container.firstChild);
+            }
+            // Reveal the hidden "Add" button for each section
+            const addButtonId = `add${id.charAt(0).toUpperCase() + id.slice(1, -3)}Btn`;
+            const button = document.getElementById(addButtonId);
+            if (button) { button.style.display = "inline"; }
+        });
+    }
 }
+//endregion
+
+//#region Validation
+function validateForm(){
+    let errors = {};
+
+	// Validate Start Date
+    const startDateInput = document.getElementById("startDateTxt");
+    const startDate = parseDateString(startDateInput.value);
+    if (!startDate) { errors["startDateTxt"] = "Start date must be in the format YYYY-MM-DD"; }
+
+	// Validate Start Date
+    const endDateInput = document.getElementById("endDateTxt");
+    const endDate = parseDateString(endDateInput.value);
+    if (!endDate) { errors["endDateTxt"] = "End date must be in the format YYYY-MM-DD"; }
+    else if (endDate < startDate) {  errors["endDateTxt"] = "End date must after your starting date"; }
+    else if (endDate < CA.startDate) {  errors["endDateTxt"] = "End date must after the start date of your collective agreement"; }
+
+	// Validate dynamic sections (Promotions, Actings, Leave Without Pay, etc.)
+    if (startDate && endDate) {
+        validateDynamicSections("promotionDiv", errors, startDate, endDate);
+        validateDynamicSections("actingDiv", errors, startDate, endDate);
+        validateDynamicSections("lwopDiv", errors, startDate, endDate);
+        validateDynamicSections("overtimeDiv", errors, startDate, endDate);
+        validateDynamicSections("lumpsumDiv", errors, startDate, endDate);
+    }
+
+	// Validate that all dropdown selectors have a non-default value selected
+    const requiredSelectors = [
+        { id: "groupSelect", placeholderValue: "Select the group" },
+        { id: "classificationSelect", placeholderValue: "Select the classification" },
+        { id: "CASelect", placeholderValue: "Select the collective agreement" },
+        { id: "levelSelect", placeholderValue: "Select your level" },
+        { id: "stepSelect", placeholderValue: "Select your step" }
+    ];
+
+    requiredSelectors.forEach(({ id, placeholderValue }) => {
+        const selectElement = document.getElementById(id);
+        if (selectElement.value === placeholderValue) {
+            errors[id] = `Please select a valid option for ${id}.`;
+        }
+    });
+
+    return { isValid: Object.keys(errors).length === 0, errors };
+} // End of validateForm
+
+
+// Function to validate dynamic sections by their container ID
+function validateDynamicSections(containerId, errors, startDate, endDate) {
+    const container = document.getElementById(containerId);
+
+    // Iterate through each fieldset in the container (each promotion, acting, etc. is a fieldset)
+    container.querySelectorAll("fieldset").forEach((fieldset, index) => {
+        // Validate overtime hours and lumpsum hours are numbers zero or higher
+		const hoursInputs = container.querySelectorAll("input[type='text'][name*='-amount-']");
+		hoursInputs.forEach((hoursInput, index) => {
+			const hoursValue = parseFloat(hoursInput.value);
+			if (isNaN(hoursValue) || hoursInput.value.trim() === "" || hoursValue < 0) {
+				errors[hoursInput.id] = `Hours in ${containerId} #${index + 1} must be a valid number that is 0 or greater.`;
+			}
+		});
+
+        // Validate date fields are after the start of the CA and between the users entered start and end date
+        const singleDateInput = fieldset.querySelector("input[type='date'][name*='-date-']");
+        const fromDateInput = fieldset.querySelector("input[type='date'][name*='-from-']");
+        const toDateInput = fieldset.querySelector("input[type='date'][name*='-to-']");
+
+        // Validate single date inputs for Promotions, Acting, Overtime, and Lump Sum Payments
+        if (singleDateInput) {
+            const dateValue = parseDateString(singleDateInput.value);
+            if (!dateValue) {
+                errors[singleDateInput.id] = `Date in ${containerId} #${index + 1} must be in the format YYYY-MM-DD.`;
+            } else if (dateValue < startDate || dateValue > endDate) {
+                errors[singleDateInput.id] = `Date in ${containerId} #${index + 1} must be between your selected start and end dates`;
+            } else if (dateValue < CA.startDate ) {
+                errors[singleDateInput.id] = `Date in ${containerId} #${index + 1} must be after the start of the collective agreement period.`;
+            }
+        }
+
+        // Validate "from" and "to" dates for Leave Without Pay
+        if (fromDateInput && toDateInput) {
+            const fromDate = parseDateString(fromDateInput.value);
+            const toDate = parseDateString(toDateInput.value);
+
+			if (!fromDate) {
+				errors[fromDateInput.id] = `From date in ${containerId} #${index + 1} must be in the format YYYY-MM-DD.`;
+			} else if (fromDate < startDate || fromDate > endDate) {
+				errors[fromDateInput.id] = `From date in ${containerId} #${index + 1} must be between your selected start and end dates.`;
+			} else if (fromDate < CA.startDate) {
+				errors[fromDateInput.id] = `From date in ${containerId} #${index + 1} must be after the start of the collective agreement period.`;
+			}
+
+			// Validate the "to" date
+			if (!toDate) {
+				errors[toDateInput.id] = `To date in ${containerId} #${index + 1} must be in the format YYYY-MM-DD.`;
+			} else if (toDate < fromDate) {
+				errors[toDateInput.id] = `To date in ${containerId} #${index + 1} must be after the from date.`;
+			} else if (toDate < startDate || toDate > endDate) {
+				errors[toDateInput.id] = `To date in ${containerId} #${index + 1} must be between your selected start and end dates.`;
+			} else if (toDate < CA.startDate) {
+				errors[toDateInput.id] = `To date in ${containerId} #${index + 1} must be after the start of the collective agreement period.`;
+			}
+        }
+    });
+} // End of validateDynamicSections
+
+function displayErrors(){}
+
+function startProcess(){}
+//endregion
 
 function setupEventListeners() {
-    let groupSel = document.getElementById("groupSelect");
-    groupSel.addEventListener("change", function () {
-        group = groupSel.value;
+	// Define a local helper function to add change listeners
+    function addChangeListener(elementId, callback) {
+        document.getElementById(elementId).addEventListener("change", callback, false);
+    }
+
+	addChangeListener("groupSelect",function () {
+        group = this.value;
         resetSelectors("groupSel");
         populateClassificationSelect();
-    }, false);
+    });
 
-    let classSel = document.getElementById("classificationSelect");
-    classSel.addEventListener("change", function () {
-        classification = classSel.value;
+   	addChangeListener("classificationSelect", function () {
+        classification = this.value; // Use 'this' to refer to the current element
         resetSelectors("classSel");
         populateCASelect();
-    }, false);
+    });
 
-	let CASel = document.getElementById("CASelect");
-    CASel.addEventListener("change", function () {
-        chosenCA = CASel.value;
-		CA = data[group][classification][chosenCA];
-		CA.startDate = parseDateString(CA.startDate);
-		CA.endDate = parseDateString(CA.endDate);
-		CA.levels = CA.salaries.length;
+    addChangeListener("CASelect", function () {
+        chosenCA = this.value; // Use 'this' to refer to the current element
+        CA = data[group][classification][chosenCA];
+        // CA.startDate = parseDateString(CA.startDate);
+        // CA.endDate = parseDateString(CA.endDate);
+        CA.levels = CA.salaries.length;
 
         resetSelectors("CASel");
         populateLevelSelect();
 
-		const levelStartDate = document.getElementById("levelStartDate");
-		levelStartDate.setAttribute("datetime", CA.startDate.toISODateString());
-		levelStartDate.innerHTML = CA.startDate.toLocaleString("en-CA", { year: 'numeric', month: 'long', day: 'numeric' });
+        const levelStartDate = document.getElementById("levelStartDate");
+        levelStartDate.setAttribute("datetime", CA.startDate.toISODateString());
+        levelStartDate.innerHTML = CA.startDate.toLocaleString("en-CA", { year: 'numeric', month: 'long', day: 'numeric' });
 
-		const calcStartDate = document.getElementById("calcStartDate");
-		calcStartDate.setAttribute("datetime", CA.startDate.toISODateString());
-		calcStartDate.innerHTML = CA.startDate.toLocaleString("en-CA", { year: 'numeric', month: 'long', day: 'numeric' });
+        const calcStartDate = document.getElementById("calcStartDate");
+        calcStartDate.setAttribute("datetime", CA.startDate.toISODateString());
+        calcStartDate.innerHTML = CA.startDate.toLocaleString("en-CA", { year: 'numeric', month: 'long', day: 'numeric' });
 
         // generateTables(CA); // TODO: Delete old tables when CA changes
-    }, false);
+    });
 
 	// TODO: If the level changes we want to change the options in the Step selector, but we also want to keep the date
-    let levelSel = document.getElementById("levelSelect");
-    levelSel.addEventListener("change", function () {
-        level = Number(levelSel.value);
+    addChangeListener("levelSelect", function () {
+        level = Number(this.value); // Use 'this' to refer to the current element
         resetSelectors("levelSel");
-        populateStepSelect(step); /* if a step has already been selected, try to use the same step */
-    }, false);
+        populateStepSelect(step);
+    });
 
 	// If the date changes we want to guess their current step
-	//document.getElementById("startDateTxt").addEventListener("change", guessStepByStartDate, false);
+    addChangeListener("startDateTxt", guessStepByStartDate)
+	// document.getElementById("startDateTxt").addEventListener("change", guessStepByStartDate, false);
 
-    let stepSel = document.getElementById("stepSelect");
-    stepSel.addEventListener("change", function () {
-        step = stepSel.value;
+    addChangeListener("stepSelect", function () {
+        step = this.value; // Use 'this' to refer to the current element
         resetSelectors("stepSel");
-    }, false);
-
-	const addActingHandler = (args) => addSectionHandler("acting", args);
-	const addLWoPHandler = (args) => addSectionHandler("lwop", args);
-	const addOvertimeHandler = (args) => addSectionHandler("overtime", args);
-	const addLumpSumHandler = (args) => addSectionHandler("lumpsum", args);
-	const addPromotionHandler = (args) => addSectionHandler("promotion", args);
+    });
 
     document.getElementById('addActingBtn').addEventListener('click', () => { addSectionHandler("acting", {}); }, false);
     document.getElementById('addLwopBtn').addEventListener('click', () => { addSectionHandler("lwop", {}); }, false);
@@ -431,7 +599,18 @@ function setupEventListeners() {
     document.getElementById('addLumpsumBtn').addEventListener('click', () => { addSectionHandler("lumpsum", {}); }, false);
     document.getElementById('addPromotionBtn').addEventListener('click', () => { addSectionHandler("promotion", {}); }, false);
 
-	//document.getElementById("calcBtn").addEventListener("click", startProcess);
+	document.getElementById("calcBtn").addEventListener("click", function(event) {
+        const validationResult = validateForm();
+        if (!validationResult.isValid) {
+            event.preventDefault(); // Stop form submission if validation fails
+            // alert("Please correct the errors in the form.");
+            console.error(validationResult.errors);
+            displayErrors(validationResult.errors);
+        } else {
+            // Proceed with calculations
+            startProcess();
+        }
+    });
 } // End of setupEventListeners
 
 function main() {
@@ -442,7 +621,7 @@ function main() {
 	console.debug("Got lang:", lang);
 
 	if (dbug === false) {
-		populateGroupSelect ();
+		populateSelect(document.getElementById("groupSelect"), Object.keys(data).map(group => ({ text: group, value: group })), null, "Select the group");
 	} else {
 		group="IT Group";
 		classification = "IT";

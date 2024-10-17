@@ -90,9 +90,14 @@
 				</select>
 			</div>
 			<div class="fieldHolder">
-				<label class="form-label" for="startDateTxt">When did you start at that level?</label> 
-				<p id="startDateDesc">For example, if you started as an IT-02 on March 15, 2015, enter <time>2015-03-15</time>.</p>
-				<input class="form-control" type="date" id="startDateTxt" aria-describedby="dateFormat startDateDesc" value="" required>
+			  <label class="form-label" for="startDateTxt">When did you start at that level?</label>
+			  <p id="startDateDesc">For example, if you started as an IT-02 on March 15, 2015, enter <time>2015-03-15</time>.</p>
+			  <input class="form-control" type="date" id="startDateTxt" aria-describedby="dateFormat startDateDesc startDateTxtWarning" value="" required>
+
+			  <!-- Warning message added dynamically -->
+			  <div id="startDateTxtWarning" class="warning">
+				<p>Please enter a valid start date.</p>
+			  </div>
 			</div>
 			<div class="fieldHolder">
 				<label class="form-label" for="stepSelect">Select your salary on <time datetime="2021-12-22" id="calcStartDate">December 22, 2021</time> (of your substantive position)</label> 

@@ -75,5 +75,22 @@ const data = {
     }
 };
 
+// Convert startDate and endDate strings to Date objects before exporting
+function processDates(data) {
+    for (const groupKey in data) {
+        const group = data[groupKey];
+        for (const classificationKey in group) {
+            const classification = group[classificationKey];
+            for (const periodKey in classification) {
+                const period = classification[periodKey];
+                if (period.startDate) { period.startDate = new Date(period.startDate); }
+                if (period.endDate) { period.endDate = new Date(period.endDate); }
+            }
+        }
+    }
+}
+
+processDates(data);
+
 // Export the data object so it can be imported elsewhere
 export {data};
