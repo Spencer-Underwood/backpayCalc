@@ -3,6 +3,7 @@
 // Else
 import {data} from "./raiseInfo.js";
 import {i18n} from "./i18n.js";
+import {StartProcess} from "./backpayCalc.js";
 
 //#region variables
 let dbug = true;
@@ -15,6 +16,7 @@ let level = -1;
 let step = -1;
 
 let lang = "en"
+const scriptName = "backpayCalc"
 //endregion
 
 //#region Helpers
@@ -146,6 +148,7 @@ function parseDateString(dateString) {
     const date = new Date(year, month - 1, day);
     return isNaN(date.getTime()) ? false : date;
 }
+
 //endregion
 
 function addSectionHandler(type, args) {
@@ -191,15 +194,15 @@ function addSectionHandler(type, args) {
         createHTMLElement("input", { parentNode: newFS, ...inputAttributes });
     }
 
-    function addLWOPFields() {
-        addInputField(`From date of ${type}: `, {
+    function addTwoDateFields() {
+        addInputField(`From: `, {
             type: "date",
             name: `${type}-from-${id}`,
             id: `${type}From${id}`,
             "aria-describedby": "dateFormat",
             value: settings.from
         });
-        addInputField(`To date of ${type}: `, {
+        addInputField(`To: `, {
             type: "date",
             name: `${type}-to-${id}`,
             id: `${type}To${id}`,
@@ -288,9 +291,12 @@ function addSectionHandler(type, args) {
     }
 
     // Call specific handlers for type-specific field creation
-    if (type === "lwop") {
-        addLWOPFields();
-    } else if (type === "promotion" || type === "acting") {
+    if (type === "lwop" ) {
+        addTwoDateFields();
+    } else if (type === "acting") {
+        addTwoDateFields();
+        addLevelSelect();
+    } else if (type === "promotion" ) {
         addDateField();
         addLevelSelect();
     } else if (type === "overtime" || type === "lumpsum") {
@@ -447,11 +453,11 @@ function validateForm(){
 
 	// Validate dynamic sections (Promotions, Actings, Leave Without Pay, etc.)
     if (startDate && endDate) {
-        validateDynamicSections("promotionDiv", errors, startDate, endDate);
-        validateDynamicSections("actingDiv", errors, startDate, endDate);
-        validateDynamicSections("lwopDiv", errors, startDate, endDate);
-        validateDynamicSections("overtimeDiv", errors, startDate, endDate);
-        validateDynamicSections("lumpsumDiv", errors, startDate, endDate);
+        validateActingSections(errors, startDate, endDate);
+        validateLWOPSections(errors, startDate, endDate);
+        validatePromotions(errors, startDate, endDate);
+        validateOvertimeSections(errors);
+        validateLumpSumSections(errors);
     }
 
 	// Validate that all dropdown selectors have a non-default value selected
@@ -472,7 +478,6 @@ function validateForm(){
 
     return { isValid: Object.keys(errors).length === 0, errors };
 } // End of validateForm
-
 
 // Function to validate dynamic sections by their container ID
 function validateDynamicSections(containerId, errors, startDate, endDate) {
@@ -533,6 +538,156 @@ function validateDynamicSections(containerId, errors, startDate, endDate) {
     });
 } // End of validateDynamicSections
 
+// Validation function for Promotions
+function validatePromotions(errors, startDate, endDate) {
+    const container = document.getElementById("promotionDiv");
+    container.querySelectorAll("fieldset").forEach((fieldset, index) => {
+        const promotionDateInput = fieldset.querySelector("input[type='date'][name*='-date-']");
+        const dateValue = parseDateString(promotionDateInput.value);
+        if (!dateValue) {
+            errors[promotionDateInput.id] = `Promotion date must be in the format YYYY-MM-DD.`;
+        } else if (dateValue < startDate || dateValue > endDate) {
+            errors[promotionDateInput.id] = `Promotion date must be between your selected start and end dates.`;
+        } else if (dateValue < CA.startDate) {
+            errors[promotionDateInput.id] = `Promotion date must be after the start of the collective agreement period.`;
+        }
+    });
+}
+
+
+// Validation function for Acting sections (including overlap)
+function validateActingSections(errors, startDate, endDate) {
+    const container = document.getElementById("actingDiv");
+    const periods = [];
+
+    container.querySelectorAll("fieldset").forEach((fieldset, index) => {
+        const fromDateInput = fieldset.querySelector("input[type='date'][name*='-from-']");
+        const toDateInput = fieldset.querySelector("input[type='date'][name*='-to-']");
+
+        // Validate "from" and "to" dates
+        if (fromDateInput && toDateInput) {
+            const fromDate = parseDateString(fromDateInput.value);
+            const toDate = parseDateString(toDateInput.value);
+
+            if (!fromDate) {
+                errors[fromDateInput.id] = `From date must be in the format YYYY-MM-DD.`;
+            } else if (fromDate < startDate || fromDate > endDate) {
+                errors[fromDateInput.id] = `From date must be between your selected start and end dates.`;
+            } else if (fromDate < CA.startDate) {
+                errors[fromDateInput.id] = `From date must be on or after the start of the collective agreement period.`;
+            }
+
+            if (!toDate) {
+                errors[toDateInput.id] = `To date  must be in the format YYYY-MM-DD.`;
+            } else if (toDate < fromDate) {
+                errors[toDateInput.id] = `To date must be after the from date.`;
+            } else if (toDate < startDate || toDate > endDate) {
+                errors[toDateInput.id] = `To date must be between your selected start and end dates.`;
+            } else if (toDate <= CA.startDate) {
+                errors[toDateInput.id] = `To date must be after the start of the collective agreement period.`;
+            }
+
+            // Collect periods for overlap validation
+            if (fromDate && toDate) {
+                periods.push({ fromDate, toDate, id: fieldset.id });
+            }
+        }
+    });
+
+    // Overlap validation
+    for (let i = 0; i < periods.length; i++) {
+        for (let j = i + 1; j < periods.length; j++) {
+            const periodA = periods[i];
+            const periodB = periods[j];
+            if (periodA.fromDate <= periodB.toDate && periodA.toDate >= periodB.fromDate) {
+                errors[periodA.id] = `Acting period ${i + 1} overlaps with Acting period ${j + 1}.`;
+                errors[periodB.id] = `Acting period ${j + 1} overlaps with Acting period ${i + 1}.`;
+            }
+        }
+    }
+}
+
+// Validation function for LWOP sections (including overlap)
+function validateLWOPSections(errors, startDate, endDate) {
+    const container = document.getElementById("lwopDiv");
+    const periods = [];
+
+    container.querySelectorAll("fieldset").forEach((fieldset, index) => {
+        const fromDateInput = fieldset.querySelector("input[type='date'][name*='-from-']");
+        const toDateInput = fieldset.querySelector("input[type='date'][name*='-to-']");
+
+        // Validate "from" and "to" dates
+        if (fromDateInput && toDateInput) {
+            const fromDate = parseDateString(fromDateInput.value);
+            const toDate = parseDateString(toDateInput.value);
+
+            if (!fromDate) {
+                errors[fromDateInput.id] = `From date in LWOP #${index + 1} must be in the format YYYY-MM-DD.`;
+            } else if (fromDate < startDate || fromDate > endDate) {
+                errors[fromDateInput.id] = `From date in LWOP #${index + 1} must be between your selected start and end dates.`;
+            } else if (fromDate < CA.startDate) {
+                errors[fromDateInput.id] = `From date in LWOP #${index + 1} must be after the start of the collective agreement period.`;
+            }
+
+            if (!toDate) {
+                errors[toDateInput.id] = `To date in LWOP #${index + 1} must be in the format YYYY-MM-DD.`;
+            } else if (toDate < fromDate) {
+                errors[toDateInput.id] = `To date in LWOP #${index + 1} must be after the from date.`;
+            } else if (toDate < startDate || toDate > endDate) {
+                errors[toDateInput.id] = `To date in LWOP #${index + 1} must be between your selected start and end dates.`;
+            } else if (toDate < CA.startDate) {
+                errors[toDateInput.id] = `To date in LWOP #${index + 1} must be after the start of the collective agreement period.`;
+            }
+
+            // Collect periods for overlap validation
+            if (fromDate && toDate) {
+                periods.push({ fromDate, toDate, id: fieldset.id });
+            }
+        }
+    });
+
+    // Overlap validation
+    for (let i = 0; i < periods.length; i++) {
+        for (let j = i + 1; j < periods.length; j++) {
+            const periodA = periods[i];
+            const periodB = periods[j];
+            if (periodA.fromDate <= periodB.toDate && periodA.toDate >= periodB.fromDate) {
+                errors[periodA.id] = `LWoP period ${i + 1} overlaps with LWoP period ${j + 1}.`;
+                errors[periodB.id] = `LWoP period ${j + 1} overlaps with LWoP period ${i + 1}.`;
+            }
+        }
+    }
+}
+
+// Validation function for Overtime sections
+function validateOvertimeSections(errors) {
+    const container = document.getElementById("overtimeDiv");
+    container.querySelectorAll("fieldset").forEach((fieldset, index) => {
+        const hoursInput = fieldset.querySelector("input[type='text'][name*='-amount-']");
+        const rateSelect = fieldset.querySelector("select[name*='-rate-']");
+
+        const hoursValue = parseFloat(hoursInput.value);
+        if (isNaN(hoursValue) || hoursInput.value.trim() === "" || hoursValue < 0) {
+            errors[hoursInput.id] = `Hours  must be a valid number that is 0 or greater.`;
+        }
+
+        if (rateSelect && rateSelect.value === "Select Overtime Rate") { errors[rateSelect.id] = `Please select a valid overtime rate.`; }
+    });
+}
+
+// Validation function for Lump Sum sections
+function validateLumpSumSections(errors) {
+    const container = document.getElementById("lumpsumDiv");
+    container.querySelectorAll("fieldset").forEach((fieldset, index) => {
+        const hoursInput = fieldset.querySelector("input[type='text'][name*='-amount-']");
+
+        const hoursValue = parseFloat(hoursInput.value);
+        if (isNaN(hoursValue) || hoursInput.value.trim() === "" || hoursValue < 0) {
+            errors[hoursInput.id] = `Hours must be a valid number that is 0 or greater.`;
+        }
+    });
+}
+
 function addErrorMessage(inID, errMsg) {
     const el = document.getElementById(inID);
 
@@ -583,6 +738,19 @@ function displayErrors(errors) {
 
 function startProcess(){}
 //endregion
+
+//#region Exported Functions
+function generateRateTables(rates){
+    return false;
+}
+
+function generatePayTables(periods){
+    return false
+}
+
+export { generateRateTables, generatePayTables };
+//endregion
+
 
 function setupEventListeners() {
 	// Define a local helper function to add change listeners
@@ -646,6 +814,7 @@ function setupEventListeners() {
     document.getElementById('addPromotionBtn').addEventListener('click', () => { addSectionHandler("promotion", {}); }, false);
 
 	document.getElementById("calcBtn").addEventListener("click", function(event) {
+        event.preventDefault(); // Stop form submission if validation fails
         // Clear all existing error messages before validating
         document.querySelectorAll(".error").forEach(errorEl => {
             const fieldId = errorEl.id.replace("Error", "");
@@ -654,12 +823,10 @@ function setupEventListeners() {
 
         const validationResult = validateForm();
         if (!validationResult.isValid) {
-            event.preventDefault(); // Stop form submission if validation fails
-            // alert("Please correct the errors in the form.");
             displayErrors(validationResult.errors);
         } else {
-            // Proceed with calculations
-            startProcess();
+            const form = document.getElementById("mainForm");
+            StartProcess(new FormData(form));
         }
     });
 } // End of setupEventListeners

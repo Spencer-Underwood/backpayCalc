@@ -83,12 +83,12 @@
             </fieldset>
             <fieldset class="border border-black p-2 m-2" id="actingFS">
                 <legend>Acting</legend>
-                <input type="button" class="btn btn-success" id="addActingBtn" value="Add Acting Period">
+                <input type="button" class="btn btn-success" id="addActingBtn" value="Add Acting Event">
                 <div id="actingDiv"></div>
             </fieldset>
             <fieldset class="border border-black p-2 m-2" id="LWoPFS">
                 <legend>Leave without Pay</legend>
-                <input type="button" class="btn btn-success" id="addLwopBtn" value="Add LwoP Period">
+                <input type="button" class="btn btn-success" id="addLwopBtn" value="Add LwoP Event">
                 <div id="lwopDiv"></div>
             </fieldset>
             <fieldset class="border border-black p-2 m-2" id="overtimeFS">
@@ -119,7 +119,7 @@
                 <caption>Pay periods</caption>
                 <thead>
                 <tr id="resultsTheadTR">
-                    <th scope="col">Period</th>
+                    <th scope="col">Event</th>
                     <th scope="col">What You Made</th>
                     <th scope="col">What You Should Have Made</th>
                     <th scope="col">Backpay Amount</th>
@@ -149,7 +149,8 @@
         </dl>
     </footer>
     <script type="module" src="UI.js"></script>
-    <!--<script type="module" src="backpayCalc.js"></script>-->
+    <script type="module" src="backpayCalc.js"></script>
+    <!--<script type="module" src="backpayCalc_old.js"></script>-->
     </body>
 </html>
 

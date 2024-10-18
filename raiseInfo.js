@@ -1,4 +1,9 @@
 // data.js
+// -- Usage guide --
+// startDate must have the same date value as the first Contractual Increase period.
+// Increments must either be one number, or one number for *every* level.
+//
+
 const data = {
     "IT Group": {
         "IT": {
@@ -75,16 +80,17 @@ const data = {
     }
 };
 
-// Convert startDate and endDate strings to Date objects before exporting
+// Convert startDate and endDate strings to Javascript Date objects before exporting this for use by other modules
 function processDates(data) {
     for (const groupKey in data) {
         const group = data[groupKey];
         for (const classificationKey in group) {
             const classification = group[classificationKey];
-            for (const periodKey in classification) {
-                const period = classification[periodKey];
-                if (period.startDate) { period.startDate = new Date(period.startDate); }
-                if (period.endDate) { period.endDate = new Date(period.endDate); }
+            for (const caKey in classification) {
+                const ca = classification[caKey];
+                if (ca.startDate) { ca.startDate = new Date(ca.startDate); }
+                if (ca.endDate) { ca.endDate = new Date(ca.endDate); }
+                ca.levels = ca.salaries.length;
             }
         }
     }
