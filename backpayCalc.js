@@ -1,4 +1,5 @@
 // backpayCalc.js
+// Documentation on acting pay: https://www.canada.ca/en/public-services-procurement/services/pay-pension/pay-administration/access-update-pay-details/pay-changes-in-your-life/changing-your-employment/acting-position.html
 import {data} from "./raiseInfo.js";
 import {i18n} from "./i18n.js";
 import {generateRateTables, generatePayTables } from "./UI.js"
@@ -20,21 +21,24 @@ Date.prototype.toString = function() {
 const EventType = {
     START:"Start",
     END:"End",
+    ANNIVERSARY:"Anniversary",
     CONTRACTUAL_INCREASE: 'Contractual Increase',
     FISCAL_NEW_YEAR: 'Fiscal New Year',
     PROMOTION:"Promotion",
-    ANNIVERSARY:"Anniversary",
-    ACTING:"Acting",
+    ACTING_START:"Acting Start",
+    ACTING_END:"Acting End",
     ACTING_ANNIVERSARY: 'Acting Anniversary',
-    LWOP:"LWoP",
+    LWOP_START:"LWoP Start",
+    LWOP_STOP:"LWoP Stop",
     OVERTIME:"Overtime",
     LUMP_SUM:"Lumpsum"
 }
 
 class Event {
-    constructor(type, startDate, level = null, step = null, hours=null, rate = 1) {
-        this.type = type;                 // Type of period (e.g., 'Normal', 'Acting', 'LWOP', etc.)
-        this.startDate = new Date(startDate);
+    constructor({ type, date: date, level = null, step = null, hours = null, rate = 1 }) {
+        if (!type || !date) { throw new Error('Missing required parameters: type and date'); }
+        this.type = type; // Type of period (e.g., 'Normal', 'Acting', 'LWOP', etc.)
+        this.startDate = new Date(date);
         this.level = level;
         this.step = step;
         this.hours = hours;
@@ -42,7 +46,7 @@ class Event {
     }
 }
 
-
+// Like events, but has a definitive start and end date and can include payments for lumpsum and OT payments
 class Period {
     constructor(type, startDate, endDate, level, step, earned, owed, rate = 1, oneTimeEvents = []) {
         this.type = type;                 // Type of period (e.g., 'Normal', 'Acting', 'LWOP', etc.)
@@ -56,75 +60,9 @@ class Period {
         this.OneTimeEvents = oneTimeEvents;
     }
 }
-
-// This class is designed to manage a collection of Event objects, ensuring they do not overlap and all fall within a defined date range.
-// It allows adding new periods while maintaining a sorted list, validating that each period fits within the specified range and does not conflict with existing periods.
-class EventManager {
-    constructor(startDate, endDate, level, step) {
-        this.events = [];
-        this.startDate = new Date(startDate);
-        this.endDate = new Date(endDate);
-        this.level = level;
-        this.step = step;
-    }
-
-    addNewEvent(options) {
-        // Destructure the properties from the options object, providing default values for all but type and startDate
-        const {type, startDate, level = null, step = null, hours=null, rate = 1} = options;
-
-        // Check if required parameters are provided
-        if (!type || !startDate) {
-            throw new Error('Missing required parameters: type and startDate');
-        }
-
-        // Use the parameters to create a new Event
-        const newEvent = new Event(type, startDate, level, step, hours, rate);
-        this.events.push(newEvent);
-        this.events.sort((a, b) => a.startDate - b.startDate);
-    }
-
-    getPayPeriods(rates){
-        const periods = [];
-
-        // Set the rate to 0 for events before the start of the end events.
-        const startEvent = this.events.find(event => event.type === EventType.START);
-        if (startEvent) { // Set rate to 0 for all events with startDate before the startEvent's startDate
-            this.events.filter(event => event.startDate < startEvent.startDate).forEach(event => { event.rate = 0; });
-        }
-
-        const endEvent = this.events.find(event => event.type === EventType.END);
-        if (endEvent) {
-            this.events.filter(event => event.startDate > endEvent.startDate).forEach(event => { event.rate = 0; });
-        }
-
-        let currentStartdate = this.startDate;
-        let currentLevel = this.level;
-        let currentStep = this.step;
-        for (let eventIndex = 0; eventIndex < this.events.length - 1; eventIndex++) {
-            const event = this.events[eventIndex];
-            const nextEvent = this.events[eventIndex + 1];
-            let endDate = new Date(nextEvent.startDate);
-            endDate.setUTCDate(endDate.getUTCDate()-1);
-
-            // Create a period from the current event to the start date of the next event
-            const period = new Period(
-                event.type,                // Type of period
-                event.startDate,           // Start date of the period
-                endDate, // End date: the day before the next event
-                event.level,               // Level during this period (if applicable)
-                event.step,                // Step during this period (if applicable)
-                0,                         // earned (you'll calculate this later)
-                0,                         // owed (you'll calculate this later)
-                event.rate                 // Rate for this period
-            );
-            periods.push(period);
-        }
-
-        return periods;
-    }
-}
 //endregion Events
 
+//#region Pay Calculations
 function generateRates(CA) {
     const calculateSalaryBreakdown = (annual, HoursPerWeek) => ({
         annual: annual,
@@ -225,6 +163,77 @@ function generateRates(CA) {
     return rates;
 }
 
+function getApplicableRate(rates, targetDate) {
+    const target = new Date(targetDate);
+    // Extract date keys, ignoring the "current" key
+    const rateDates = Object.keys(rates).filter(date => date !== "current").map(date => new Date(date)).sort((a, b) => a - b);
+
+
+    // Shortcut the cases where date is before or after the available range of rates
+    if (target < rateDates[0]) { return rates["current"]; }
+    if (target > rateDates[rateDates.length - 1]) { return rates[ (rateDates[rateDates.length - 1]).toISODateString() ]; }
+
+    // Iterate through the sorted dates to find the applicable rate
+    let applicableRate = null;
+    for (let i = 0; i < rateDates.length; i++) {
+        if (target >= rateDates[i]) { applicableRate = rates[(rateDates[i]).toISODateString()];
+        } else { break; }
+    }
+    return applicableRate;
+}
+
+// Used for both promotions AND actings
+// https://www.canada.ca/en/public-services-procurement/services/pay-pension/pay-administration/access-update-pay-details/pay-changes-in-your-life/changing-your-employment/acting-position.html
+function getPromotionalPay(rates, targetDate) {
+    const target = new Date(targetDate);
+    // Extract date keys, ignoring the "current" key
+    const rateDates = Object.keys(rates).filter(date => date !== "current").map(date => new Date(date)).sort((a, b) => a - b);
+
+
+    // Shortcut the cases where date is before or after the available range of rates
+    if (target < rateDates[0]) { return rates["current"]; }
+    if (target > rateDates[rateDates.length - 1]) { return rates[ (rateDates[rateDates.length - 1]).toISODateString() ]; }
+
+    // Iterate through the sorted dates to find the applicable rate
+    let applicableRate = null;
+    for (let i = 0; i < rateDates.length; i++) {
+        if (target >= rateDates[i]) { applicableRate = rates[(rateDates[i]).toISODateString()];
+        } else { break; }
+    }
+    return applicableRate;
+}
+
+function theBigOne(events, rates, startDate, endDate, caStartDate, level, step){
+    function calculatePromotion(level, step, newLevel){
+        // level 2, step 7
+        // if not maxed out on substantive increments, then:
+        // find minimum increment for acting level (step 2 minus step 1)
+        // calculate substantive salary with new yearly increment
+        // add minimum increment to substantive salary, find first step of new acting level that is <LESS> than the combined values
+        // else:
+        // on anniversary of ACTING, increment pay by one step from new acting level
+    }
+
+    // TODO: Change to use the greater of startEvent or CA.startDate (in case no startEvent
+    const startEvent = events.find(event => event.type === EventType.START);
+    if (startEvent) {events.filter(event => event.date < startEvent.date).forEach(event => event.rate = 0); }
+
+    const endEvent = events.find(event => event.type === EventType.END);
+    if (endEvent) {events.filter(event => event.date > endEvent.date).forEach(event => event.rate = 0); }
+
+    let baseLevel = level;
+    let baseStep = step;
+    // let baseSalary = rates.annual[baseLevel][baseStep];
+    let baseAnniversary = startDate;
+
+    var whatever = getApplicableRate(rates, "2023-01-01");
+
+
+    events.filter()
+}
+
+//endregion Pay Calculations
+
 // Placeholder function to kick off the backpay calculations
 function StartProcess(formData, CA=null) {
     console.log("StartProcess::Starting backpay calculations...");
@@ -241,13 +250,14 @@ function StartProcess(formData, CA=null) {
 
     if (!CA) {CA = data[group][classification][chosenCA];}
 
-    const manager = new EventManager(CA.startDate, endDate, level, step);
-    manager.addNewEvent({type:EventType.START, startDate:startDate});
-    manager.addNewEvent({type:EventType.END, startDate:endDate});
+    //#region Add Events
+    const events = [];
+    events.push(new Event({type:EventType.START, date:startDate}));
+    events.push(new Event({type:EventType.END, date:endDate}));
 
     CA.periods.forEach((period) => {
         if (period.type === "Contractual Increase" || period.type === "Fiscal New Year")
-            manager.addNewEvent({type:period.type, startDate:period.date});
+            events.push(new Event({type:period.type, date:period.date}));
         }
     )
 
@@ -258,7 +268,7 @@ function StartProcess(formData, CA=null) {
 
         if (promoDate === undefined || promoLevel === undefined) { break; } // If sections don't exist, exit loop
 
-        manager.addNewEvent({type:EventType.PROMOTION, startDate:promoDate, level:promoLevel});
+        events.push(new Event({type:EventType.PROMOTION, date:promoDate, level:promoLevel}));
         promoId += 1;
     }
 
@@ -270,8 +280,8 @@ function StartProcess(formData, CA=null) {
 
         if (actingFrom === undefined || actingTo === undefined || actingLevel === undefined) { break; } // If sections don't exist, exit loop
 
-        manager.addNewEvent({type:EventType.ACTING, startDate:actingFrom, level:actingLevel});
-        manager.addNewEvent({type:EventType.ACTING, startDate:actingTo, level:actingLevel});
+        events.push(new Event({type:EventType.ACTING_START, date:actingFrom, level:actingLevel}));
+        events.push(new Event({type:EventType.ACTING_END, date:actingTo, level:actingLevel}));
         actingId += 1;
     }
 
@@ -282,8 +292,8 @@ function StartProcess(formData, CA=null) {
 
         if (lwopFrom === undefined || lwopTo === undefined) { break; } // If sections don't exist, exit loop
 
-        manager.addNewEvent({type:EventType.LWOP, startDate:lwopFrom, rate:0});
-        manager.addNewEvent({type:EventType.LWOP, startDate:lwopTo, rate:1});
+        events.push(new Event({type:EventType.LWOP_START, date:lwopFrom, rate:0}));
+        events.push(new Event({type:EventType.LWOP_STOP, date:lwopTo, rate:1}));
         lwopId += 1;
     }
 
@@ -295,7 +305,7 @@ function StartProcess(formData, CA=null) {
 
         if (overtimeDate === undefined || overtimeAmount === undefined) { break; } // If sections don't exist, exit loop
 
-        manager.addNewEvent({type:EventType.ACTING, startDate:overtimeDate, hours:overtimeAmount, rate:overtimeRate });
+        events.push(new Event({type:EventType.OVERTIME, date:overtimeDate, hours:overtimeAmount, rate:overtimeRate }));
         overtimeId += 1;
     }
 
@@ -306,16 +316,18 @@ function StartProcess(formData, CA=null) {
 
         if (lumpsumDate === undefined || lumpsumAmount === undefined) { break; } // If sections don't exist, exit loop
 
-        manager.addNewEvent({type:EventType.LUMP_SUM, startDate:lumpsumDate, hours:lumpsumAmount});
+        events.push(new Event({type:EventType.LUMP_SUM, startDate:lumpsumDate, hours:lumpsumAmount}));
         lumpsumId += 1;
     }
+    events.sort((a, b) => a.startDate - b.startDate);
+    //endregion AddEvents
 
     let rates = generateRates(CA);
     generateRateTables(rates);
     const currentRates = rates.current;
     delete rates.current;
 
-    var whatever = manager.getPayPeriods(rates);
+    theBigOne(events, rates, startDate, endDate, level, step, CA.startDate);
     console.log(rates);
 
     // Restore `current` after your calculations
