@@ -16,7 +16,21 @@ let level = -1;
 let step = -1;
 
 let lang = "en"
-const scriptName = "backpayCalc"
+
+const SectionTypes = {
+    PROMOTION:"promotion",
+    ACTING:"acting",
+    LWOP:"lwop",
+    OVERTIME:"overtime",
+    LUMPSUM:"lumpsum"
+}
+const SectionDivs = {
+    PROMOTION:"promotionDiv",
+    ACTING:"actingDiv",
+    LWOP:"lwopDiv",
+    OVERTIME:"overtimeDiv",
+    LUMPSUM:"lumpsumDiv"
+}
 //endregion
 
 //#region Helpers
@@ -202,6 +216,58 @@ function loadDataFromUrl(url = null){
 
     clearDynamicSections(["promotionDiv", "actingDiv", "lwopDiv", "overtimeDiv", "lumpsumDiv"]);
 
+    // Load promotions
+    let index = 0;
+    while (params.has(`${SectionTypes.PROMOTION}-date-${index}`)) {
+        const promotionArgs = {
+            date: params.get(`${SectionTypes.PROMOTION}-date-${index}`),
+            level: params.get(`${SectionTypes.PROMOTION}-level-${index}`),
+        };
+        addSectionHandler(SectionTypes.PROMOTION, promotionArgs);
+        index++;
+    }
+
+    index = 0;
+    while (params.has(`${SectionTypes.ACTING}-from-${index}`)) {
+        const actingArgs = {
+            from: params.get(`${SectionTypes.ACTING}-from-${index}`),
+            to: params.get(`${SectionTypes.ACTING}-to-${index}`),
+            level: params.get(`${SectionTypes.ACTING}-level-${index}`)
+        };
+        addSectionHandler(SectionTypes.ACTING, actingArgs);
+        index++;
+    }
+
+    index = 0;
+    while (params.has(`${SectionTypes.LWOP}-from-${index}`)) {
+        const lwopArgs = {
+            from: params.get(`${SectionTypes.LWOP}-from-${index}`),
+            to: params.get(`${SectionTypes.LWOP}-to-${index}`)
+        };
+        addSectionHandler(SectionTypes.LWOP, lwopArgs);
+        index++;
+    }
+
+    index = 0;
+    while (params.has(`${SectionTypes.OVERTIME}-from-${index}`)) {
+        const overtimeArgs = {
+            date: params.get(`${SectionTypes.OVERTIME}-date-${index}`),
+            amount: params.get(`${SectionTypes.OVERTIME}-amount-${index}`)
+        };
+        addSectionHandler(SectionTypes.OVERTIME, overtimeArgs);
+        index++;
+    }
+
+    index = 0;
+    while (params.has(`${SectionTypes.LUMPSUM}-from-${index}`)) {
+        const lumpsumArgs = {
+            date: params.get(`${SectionTypes.LUMPSUM}-date-${index}`),
+            amount: params.get(`${SectionTypes.LUMPSUM}-amount-${index}`),
+            rate: params.get(`${SectionTypes.LUMPSUM}-rate-${index}`)
+        };
+        addSectionHandler(SectionTypes.LUMPSUM, lumpsumArgs);
+        index++;
+    }
     console.log("loadDataFromUrl::Breakpoint");
 }
 
@@ -228,7 +294,11 @@ function addSectionHandler(type, args) {
 			const toDate = new Date(settings.to);
 			if (isNaN(toDate.getTime()) || toDate < CA.startDate || toDate > CA.endDate) { settings.to = null; }
 		}
-        if (settings.level) { settings.level = settings.level.replace(/\D/g, ""); }
+        if (!settings.level) {
+            settings.level = Math.min(level + 1, CA.levels - 1); }
+        else {
+            settings.level = settings.level.replace(/\D/g, "");
+        }
         // Ensure hours is an empty string if it fails validation or is not provided
         if (settings.hours) { settings.hours = settings.hours.replace(/\D/g, ""); }
         else { settings.hours = ""; }
@@ -492,7 +562,7 @@ function resetSelectors(selector){
 			break;
 	}
 }
-//endregion
+//endregion Dropdowns
 
 //#region Validation
 function validateForm(){
@@ -538,65 +608,6 @@ function validateForm(){
     return { isValid: Object.keys(errors).length === 0, errors };
 } // End of validateForm
 
-// Function to validate dynamic sections by their container ID
-function validateDynamicSections(containerId, errors, startDate, endDate) {
-    const container = document.getElementById(containerId);
-
-    // Iterate through each fieldset in the container (each promotion, acting, etc. is a fieldset)
-    container.querySelectorAll("fieldset").forEach((fieldset, index) => {
-        // Validate overtime hours and lumpsum hours are numbers zero or higher
-		const hoursInputs = container.querySelectorAll("input[type='text'][name*='-amount-']");
-		hoursInputs.forEach((hoursInput, index) => {
-			const hoursValue = parseFloat(hoursInput.value);
-			if (isNaN(hoursValue) || hoursInput.value.trim() === "" || hoursValue < 0) {
-				errors[hoursInput.id] = `Hours in ${containerId} #${index + 1} must be a valid number that is 0 or greater.`;
-			}
-		});
-
-        // Validate date fields are after the start of the CA and between the users entered start and end date
-        const singleDateInput = fieldset.querySelector("input[type='date'][name*='-date-']");
-        const fromDateInput = fieldset.querySelector("input[type='date'][name*='-from-']");
-        const toDateInput = fieldset.querySelector("input[type='date'][name*='-to-']");
-
-        // Validate single date inputs for Promotions, Acting, Overtime, and Lump Sum Payments
-        if (singleDateInput) {
-            const dateValue = parseDateString(singleDateInput.value);
-            if (!dateValue) {
-                errors[singleDateInput.id] = `Date in ${containerId} #${index + 1} must be in the format YYYY-MM-DD.`;
-            } else if (dateValue < startDate || dateValue > endDate) {
-                errors[singleDateInput.id] = `Date in ${containerId} #${index + 1} must be between your selected start and end dates`;
-            } else if (dateValue < CA.startDate ) {
-                errors[singleDateInput.id] = `Date in ${containerId} #${index + 1} must be after the start of the collective agreement period.`;
-            }
-        }
-
-        // Validate "from" and "to" dates for Leave Without Pay
-        if (fromDateInput && toDateInput) {
-            const fromDate = parseDateString(fromDateInput.value);
-            const toDate = parseDateString(toDateInput.value);
-
-			if (!fromDate) {
-				errors[fromDateInput.id] = `From date in ${containerId} #${index + 1} must be in the format YYYY-MM-DD.`;
-			} else if (fromDate < startDate || fromDate > endDate) {
-				errors[fromDateInput.id] = `From date in ${containerId} #${index + 1} must be between your selected start and end dates.`;
-			} else if (fromDate < CA.startDate) {
-				errors[fromDateInput.id] = `From date in ${containerId} #${index + 1} must be after the start of the collective agreement period.`;
-			}
-
-			// Validate the "to" date
-			if (!toDate) {
-				errors[toDateInput.id] = `To date in ${containerId} #${index + 1} must be in the format YYYY-MM-DD.`;
-			} else if (toDate < fromDate) {
-				errors[toDateInput.id] = `To date in ${containerId} #${index + 1} must be after the from date.`;
-			} else if (toDate < startDate || toDate > endDate) {
-				errors[toDateInput.id] = `To date in ${containerId} #${index + 1} must be between your selected start and end dates.`;
-			} else if (toDate < CA.startDate) {
-				errors[toDateInput.id] = `To date in ${containerId} #${index + 1} must be after the start of the collective agreement period.`;
-			}
-        }
-    });
-} // End of validateDynamicSections
-
 // Validation function for Promotions
 function validatePromotions(errors, startDate, endDate) {
     const container = document.getElementById("promotionDiv");
@@ -634,7 +645,6 @@ function validatePromotions(errors, startDate, endDate) {
         }
     });
 }
-
 
 // Validation function for Acting sections (including overlap)
 function validateActingSections(errors, startDate, endDate) {
@@ -920,6 +930,7 @@ function setupEventListeners() {
 } // End of setupEventListeners
 
 const testingURl = "/backpayCalc/backpayCalc.html?group=IT+Group&classification=IT&collective-agreement=2021-2025&level=0&start-date=2020-01-01&step=0&end-date=2024-02-14"
+const promotionURL = "/backpayCalc/backpayCalc.html?group=IT+Group&classification=IT&collective-agreement=2021-2025&level=0&start-date=2020-01-01&step=0&end-date=2024-02-14&promotion-date-0=2023-06-08&promotion-level-0=0"
 
 function main() {
 	console.log("Got data:", data);
@@ -931,7 +942,7 @@ function main() {
 	if (dbug === false) {
 		populateSelect(document.getElementById("groupSelect"), Object.keys(data).map(group => ({ text: group, value: group })), null, "Select the group");
 	} else {
-        loadDataFromUrl(testingURl);
+        loadDataFromUrl(promotionURL);
 		// group="IT Group";
 		// classification = "IT";
 		// chosenCA = "2021-2025";
