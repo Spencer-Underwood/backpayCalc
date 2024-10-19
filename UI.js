@@ -36,18 +36,19 @@ function createHTMLElement (type, attribs) {
 	let newEl = document.createElement(type);
 	//This used to use a var mainForm, but I localized it to just access the element directly
 	document.getElementById("mainForm").appendChild(newEl);
+    console.debug(`Creating HTML element of type: ${type} with attributes:`, attribs);
 
 	let dbug = (arguments.length == 3 &&arguments[2] != null && arguments[2] != false ? true : false);
 	for (let k in attribs) {
-		console.debug("Dealing with attrib " + k + ".");
+		// console.debug("Dealing with attrib " + k + ".");
 		if (k == "parentNode") {
-			console.debug("Dealing with parentnode.");
+			// console.debug("Dealing with parentnode.");
 			if (attribs[k] instanceof HTMLElement) {
-				console.debug("Appending...");
+				// console.debug("Appending...");
 				attribs[k].appendChild(newEl);
 			} else if (attribs[k] instanceof String || typeof(attribs[k]) === "string") {
 				try {
-					console.debug("Getting, then appending...");
+					// console.debug("Getting, then appending...");
 					document.getElementById(attribs[k]).appendChild(newEl);
 				}
 				catch (er) {
@@ -55,15 +56,15 @@ function createHTMLElement (type, attribs) {
 				}
 			}
 		} else if (k == "textNode" || k == "nodeText") {
-			console.debug("Dealing with textnode " + attribs[k] + ".");
+			// console.debug("Dealing with textnode " + attribs[k] + ".");
 			if (typeof (attribs[k]) == "string") {
-				console.debug("As string...");
+				// console.debug("As string...");
 				newEl.appendChild(document.createTextNode(attribs[k]));
 			} else if (attribs[k] instanceof HTMLElement) {
-				console.debug("As HTML element...");
+				// console.debug("As HTML element...");
 				newEl.appendChild(attribs[k]);
 			} else {
-				console.debug("As something else...");
+				// console.debug("As something else...");
 				newEl.appendChild(document.createTextNode(attribs[k].toString()));
 			}
 		} else {
@@ -150,6 +151,63 @@ function parseDateString(dateString) {
 }
 
 //endregion
+
+//#region URL Stuff
+function savaDataToURL(formId) {
+    const form = document.getElementById(formId);
+    const formData = new FormData(form);
+    const params = new URLSearchParams();
+
+    // Iterate over the form data and add each field to the URL parameters
+    formData.forEach((value, key) => {
+        if (value) {params.append(key, value); }
+    });
+    const encodedParams = decodeURIComponent(params.toString());
+    console.log("Generated URL parameters:", params.toString());
+
+    // Update the URL without reloading the page
+    let newUrl = `${window.location.pathname}?${params.toString()}`;
+    // newUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?${encodedParams}`;
+
+    console.log(`saveDataToUrl::Setting URL to ${newUrl}`);
+
+    loadDataFromUrl(newUrl);
+    window.history.replaceState(null, '', newUrl);
+}
+
+function loadDataFromUrl(url = null){
+    const queryString = url ? url.split('?')[1] || "" : window.location.search;
+    const params = new URLSearchParams(queryString);
+    console.debug(`loadDataFromUrl::${queryString}`);
+
+    // Load each field, throwing an error if it doesn't exist
+    group = params.get("group");
+    classification = params.get("classification");
+    chosenCA = params.get("collective-agreement");
+    level = params.get("level");
+    step = params.get("step");
+    let startDate = params.get("start-date");
+    let endDate = params.get("end-date");
+
+    if (!(group && classification && chosenCA && level && step && startDate && endDate)) { throw new Error("loadDataFromUrl::Missing critical URL parameter") }
+    CA = data[group][classification][chosenCA];
+
+    populateGroupSelect(group);
+    populateClassificationSelect(classification);
+    populateCASelect(chosenCA);
+    populateLevelSelect(parseInt(level));
+    populateStepSelect(parseInt(step));
+    document.getElementById("startDateTxt").value = startDate;
+    document.getElementById("endDateTxt").value = endDate;
+
+    clearDynamicSections(["promotionDiv", "actingDiv", "lwopDiv", "overtimeDiv", "lumpsumDiv"]);
+
+    console.log("loadDataFromUrl::Breakpoint");
+}
+
+
+
+//endregion URL Stuff
 
 function addSectionHandler(type, args) {
     // Initialize settings with default values for each field (date, from, to, level, hours, rate)
@@ -320,7 +378,9 @@ function populateSelect(selectElement, options, bookmarkValue = null, placeholde
 	// Add options to the dropdown
 	options.forEach(option => {
 		const attributes = { parentNode: selectElement, textNode: option.text, value: option.value };
-		if (bookmarkValue !== null && bookmarkValue !== undefined && bookmarkValue === option.value) { attributes["selected"] = true; }
+		if (bookmarkValue !== null && bookmarkValue !== undefined && bookmarkValue === option.value) {
+            attributes["selected"] = true;
+        }
 		createHTMLElement("option", attributes);
 	});
 
@@ -389,6 +449,19 @@ function guessStepByStartDate() {
     document.getElementById("stepSelect").selectedIndex = step + 1;
 } // End of guessStepByStartDate
 
+function clearDynamicSections(sectionIds) {
+    sectionIds.forEach(id => {
+        const container = document.getElementById(id);
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
+        // Reveal the hidden "Add" button for each section
+        const addButtonId = `add${id.charAt(0).toUpperCase() + id.slice(1, -3)}Btn`;
+        const button = document.getElementById(addButtonId);
+        if (button) { button.style.display = "inline"; }
+    });
+}
+
 // Only a convenience function for the group / level / etc selectors. Do not use elsewhere, won't work as expected!
 function resetSelectors(selector){
 	console.debug(`Resetting selectors on: ${selector}`)
@@ -418,20 +491,6 @@ function resetSelectors(selector){
 		case "stepSel" :
 			break;
 	}
-
-	// Inline helper function to clear out dynamic sections by their container IDs
-    function clearDynamicSections(sectionIds) {
-        sectionIds.forEach(id => {
-            const container = document.getElementById(id);
-            while (container.firstChild) {
-                container.removeChild(container.firstChild);
-            }
-            // Reveal the hidden "Add" button for each section
-            const addButtonId = `add${id.charAt(0).toUpperCase() + id.slice(1, -3)}Btn`;
-            const button = document.getElementById(addButtonId);
-            if (button) { button.style.display = "inline"; }
-        });
-    }
 }
 //endregion
 
@@ -569,6 +628,11 @@ function validateActingSections(errors, startDate, endDate) {
             const fromDate = parseDateString(fromDateInput.value);
             const toDate = parseDateString(toDateInput.value);
 
+            // Assuming CA.startDate is defined and represents the start date of the new CA
+            const oneYearBeforeCA = new Date(CA.startDate);
+            oneYearBeforeCA.setUTCFullYear(oneYearBeforeCA.getUTCFullYear() - 1);
+
+            // Validate "from" date for Acting (or other sections)
             if (!fromDate) {
                 errors[fromDateInput.id] = `From date must be in the format YYYY-MM-DD.`;
             } else if (fromDate < startDate || fromDate > endDate) {
@@ -576,6 +640,7 @@ function validateActingSections(errors, startDate, endDate) {
             } else if (fromDate < CA.startDate) {
                 errors[fromDateInput.id] = `From date must be on or after the start of the collective agreement period.`;
             }
+
 
             if (!toDate) {
                 errors[toDateInput.id] = `To date  must be in the format YYYY-MM-DD.`;
@@ -826,10 +891,13 @@ function setupEventListeners() {
             displayErrors(validationResult.errors);
         } else {
             const form = document.getElementById("mainForm");
+            savaDataToURL("mainForm");
             StartProcess(new FormData(form));
         }
     });
 } // End of setupEventListeners
+
+const testingURl = "/backpayCalc/backpayCalc.html?group=IT+Group&classification=IT&collective-agreement=2021-2025&level=0&start-date=2020-01-01&step=0&end-date=2024-02-14"
 
 function main() {
 	console.log("Got data:", data);
@@ -841,21 +909,22 @@ function main() {
 	if (dbug === false) {
 		populateSelect(document.getElementById("groupSelect"), Object.keys(data).map(group => ({ text: group, value: group })), null, "Select the group");
 	} else {
-		group="IT Group";
-		classification = "IT";
-		chosenCA = "2021-2025";
-		CA = data[group][classification][chosenCA];
-		CA.levels = 5;
-		level=0;
-		step=0;
-		document.getElementById("startDateTxt").value="2022-01-01";
-
-		populateGroupSelect ("IT Group");
-		populateClassificationSelect("IT");
-		populateCASelect("2021-2025");
-		// generateTables(CA);
-		populateLevelSelect(0);
-		populateStepSelect(0);
+        loadDataFromUrl(testingURl);
+		// group="IT Group";
+		// classification = "IT";
+		// chosenCA = "2021-2025";
+		// CA = data[group][classification][chosenCA];
+		// CA.levels = 5;
+		// level=0;
+		// step=0;
+		// document.getElementById("startDateTxt").value="2022-01-01";
+        //
+		// populateGroupSelect ("IT Group");
+		// populateClassificationSelect("IT");
+		// populateCASelect("2021-2025");
+		// // generateTables(CA);
+		// populateLevelSelect(0);
+		// populateStepSelect(0);
 	}
 
 
@@ -863,3 +932,4 @@ function main() {
 } // End of main
 console.log("Finished loading UI.js.");
 main();
+
