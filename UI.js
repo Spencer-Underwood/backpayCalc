@@ -600,6 +600,22 @@ function validateDynamicSections(containerId, errors, startDate, endDate) {
 // Validation function for Promotions
 function validatePromotions(errors, startDate, endDate) {
     const container = document.getElementById("promotionDiv");
+    const actingContainer = document.getElementById("actingDiv");
+
+    // Retrieve all acting periods in-line
+    const actingPeriods = [];
+    actingContainer.querySelectorAll("fieldset").forEach((fieldset) => {
+        const fromInput = fieldset.querySelector("input[type='date'][name*='-from-']");
+        const toInput = fieldset.querySelector("input[type='date'][name*='-to-']");
+
+        const fromDate = parseDateString(fromInput.value);
+        const toDate = parseDateString(toInput.value);
+
+        if (fromDate && toDate) {
+            actingPeriods.push({ from: fromDate, to: toDate });
+        }
+    });
+
     container.querySelectorAll("fieldset").forEach((fieldset, index) => {
         const promotionDateInput = fieldset.querySelector("input[type='date'][name*='-date-']");
         const dateValue = parseDateString(promotionDateInput.value);
@@ -609,6 +625,12 @@ function validatePromotions(errors, startDate, endDate) {
             errors[promotionDateInput.id] = `Promotion date must be between your selected start and end dates.`;
         } else if (dateValue < CA.startDate) {
             errors[promotionDateInput.id] = `Promotion date must be after the start of the collective agreement period.`;
+        } else {
+            // Check if promotion falls within any acting period
+            const isDuringActingPeriod = actingPeriods.some(period => dateValue >= period.from && dateValue <= period.to);
+            if (isDuringActingPeriod) {
+                errors[promotionDateInput.id] = `Promotion date cannot be during an acting period.`;
+            }
         }
     });
 }
