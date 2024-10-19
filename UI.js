@@ -216,58 +216,23 @@ function loadDataFromUrl(url = null){
 
     clearDynamicSections(["promotionDiv", "actingDiv", "lwopDiv", "overtimeDiv", "lumpsumDiv"]);
 
-    // Load promotions
-    let index = 0;
-    while (params.has(`${SectionTypes.PROMOTION}-date-${index}`)) {
-        const promotionArgs = {
-            date: params.get(`${SectionTypes.PROMOTION}-date-${index}`),
-            level: params.get(`${SectionTypes.PROMOTION}-level-${index}`),
-        };
-        addSectionHandler(SectionTypes.PROMOTION, promotionArgs);
-        index++;
+    // Helper function to reduce duplication of similar code
+    function loadSections(params, sectionType, fields, handler) {
+        let index = 0;
+        while (params.has(`${sectionType}-${fields[0]}-${index}`)) {
+            const sectionArgs = {};
+            fields.forEach(field => { sectionArgs[field] = params.get(`${sectionType}-${field}-${index}`); });
+            handler(sectionType, sectionArgs);
+            index++;
+        }
     }
 
-    index = 0;
-    while (params.has(`${SectionTypes.ACTING}-from-${index}`)) {
-        const actingArgs = {
-            from: params.get(`${SectionTypes.ACTING}-from-${index}`),
-            to: params.get(`${SectionTypes.ACTING}-to-${index}`),
-            level: params.get(`${SectionTypes.ACTING}-level-${index}`)
-        };
-        addSectionHandler(SectionTypes.ACTING, actingArgs);
-        index++;
-    }
+    loadSections(params, SectionTypes.PROMOTION, ["date", "level"], addSectionHandler);
+    loadSections(params, SectionTypes.ACTING, ["from", "to", "level"], addSectionHandler);
+    loadSections(params, SectionTypes.LWOP, ["from", "to"], addSectionHandler);
+    loadSections(params, SectionTypes.OVERTIME, ["date", "amount"], addSectionHandler);
+    loadSections(params, SectionTypes.LUMPSUM, ["date", "amount", "rate"], addSectionHandler);
 
-    index = 0;
-    while (params.has(`${SectionTypes.LWOP}-from-${index}`)) {
-        const lwopArgs = {
-            from: params.get(`${SectionTypes.LWOP}-from-${index}`),
-            to: params.get(`${SectionTypes.LWOP}-to-${index}`)
-        };
-        addSectionHandler(SectionTypes.LWOP, lwopArgs);
-        index++;
-    }
-
-    index = 0;
-    while (params.has(`${SectionTypes.OVERTIME}-from-${index}`)) {
-        const overtimeArgs = {
-            date: params.get(`${SectionTypes.OVERTIME}-date-${index}`),
-            amount: params.get(`${SectionTypes.OVERTIME}-amount-${index}`)
-        };
-        addSectionHandler(SectionTypes.OVERTIME, overtimeArgs);
-        index++;
-    }
-
-    index = 0;
-    while (params.has(`${SectionTypes.LUMPSUM}-from-${index}`)) {
-        const lumpsumArgs = {
-            date: params.get(`${SectionTypes.LUMPSUM}-date-${index}`),
-            amount: params.get(`${SectionTypes.LUMPSUM}-amount-${index}`),
-            rate: params.get(`${SectionTypes.LUMPSUM}-rate-${index}`)
-        };
-        addSectionHandler(SectionTypes.LUMPSUM, lumpsumArgs);
-        index++;
-    }
     console.log("loadDataFromUrl::Breakpoint");
 }
 
