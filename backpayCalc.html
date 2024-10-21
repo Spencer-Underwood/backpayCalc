@@ -93,9 +93,9 @@
             </fieldset>
             <fieldset class="border border-black p-2 m-2" id="overtimeFS">
                 <legend>Overtime / Standby</legend>
-                <p id="overtimeExp">You don't need to put every single overtime instance in. Just a total of hours for each
+                <p id="overtimeExp">You don't need to put every single overtime instance in. Just a total of amount for each
                     rate (1.5 or 2.0) for each period. Example: if you worked for an extra hour every day for a week where
-                    your pay rate didn't change, enter any date within that week, and enter 5 for the number of hours, and
+                    your pay rate didn't change, enter any date within that week, and enter 5 for the number of amount, and
                     1.5x for the rate.</p>
                 <input type="button" class="btn btn-success" id="addOvertimeBtn" value="Add Overtime"
                        aria-describedby="overtimeExp">
@@ -119,7 +119,10 @@
                 <caption>Pay periods</caption>
                 <thead>
                 <tr id="resultsTheadTR">
-                    <th scope="col">Event</th>
+                    <th scope="col">Period</th>
+                    <th scope="col">Effective Level</th>
+                    <th scope="col">Rate of Pay</th>
+                    <th scope="col">Time</th>
                     <th scope="col">What You Made</th>
                     <th scope="col">What You Should Have Made</th>
                     <th scope="col">Backpay Amount</th>

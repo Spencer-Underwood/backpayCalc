@@ -55,24 +55,6 @@ const EventType = {
     LUMPSUM:"Lumpsum"
 }
 
-// Higher priority is calculated first. CA_START is the highest priority since it's the start of all calculations.
-const EventPriority = {
-    [EventType.CA_START]:10, //
-    [EventType.START]:0,
-    [EventType.END]:-1,
-    [EventType.ANNIVERSARY]:1,
-    [EventType.CONTRACTUAL_INCREASE]:0,
-    [EventType.FISCAL_NEW_YEAR]:0,
-    [EventType.PROMOTION]:1,
-    [EventType.ACTING_START]:0,
-    [EventType.ACTING_STOP]:0,
-    [EventType.ACTING_ANNIVERSARY]:0,
-    [EventType.LWOP_START]:2,
-    [EventType.LWOP_STOP]:0,
-    [EventType.OVERTIME]:0,
-    [EventType.LUMPSUM]:0,
-}
-
 class Event {
     constructor({ type, date: date, level = null, step = null, amount = null, rate = 1 }) {
         if (!type || !date) { throw new Error('Missing required parameters: type and date'); }
@@ -323,7 +305,6 @@ function generateRates(CA) {
             dailySteps.push(breakdown.daily);
             hourlySteps.push(breakdown.hourly);
         }
-        rates.current.levels = levels;
         rates.current.annual.push(annualSteps);
         rates.current.weekly.push(weeklySteps);
         rates.current.daily.push(dailySteps);
@@ -363,7 +344,6 @@ function generateRates(CA) {
                 let annual = previousAnnual[level][step] * (1 + incrementValue / 100);
                 const breakdown = calculateSalaryBreakdown(annual, CA.hoursPerWeek);
 
-                annualSteps.steps = salaries[level].length;
                 annualSteps.push(breakdown.annual);
                 weeklySteps.push(breakdown.weekly);
                 dailySteps.push(breakdown.daily);
@@ -494,7 +474,8 @@ function calculatePayPeriods(CA, events, rates){
         thisPeriod.rate = currentRate;
 
         // Sort same-day events by priority. TODO: See if this is still needed
-        sameDayEvents.sort((a, b) => EventPriority[b.type] - EventPriority[a.type]);
+        // sameDayEvents.sort((a, b) => EventPriority[b.type] - EventPriority[a.type]);
+
         for (let j = 0; j < sameDayEvents.length; j++) {
             const currentEvent = sameDayEvents[j];
             thisPeriod.addType(currentEvent.type);
@@ -582,6 +563,7 @@ function calculatePayPeriods(CA, events, rates){
             type: event.type,
             startDate: event.date,
             endDate: event.date,
+            rate: currentRate,
             level: matchingPeriod.level,
             step: matchingPeriod.step
         });
@@ -599,7 +581,7 @@ function calculatePayPeriods(CA, events, rates){
     }
 
     console.log(`calculatePayPeriods::Finished calculating periods with result:`, periodManager)
-    return "";
+    return periodManager;
 }
 
 //endregion Pay Calculations
@@ -636,7 +618,7 @@ function StartProcess(formData, CA=null) {
 
     let periods = calculatePayPeriods(CA, eventManager.getEvents(), rates);
 
-    generatePayTables(periods);
+    generatePayTables(periods.getPeriods());
 
     return false;
 }

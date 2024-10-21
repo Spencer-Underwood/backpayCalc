@@ -31,6 +31,22 @@ const SectionDivs = {
     OVERTIME:"overtimeDiv",
     LUMPSUM:"lumpsumDiv"
 }
+const EventType = {
+    CA_START:"Collective Agreement Start",
+    START:"Start",
+    END:"End",
+    ANNIVERSARY:"Anniversary",
+    CONTRACTUAL_INCREASE: 'Contractual Increase',
+    FISCAL_NEW_YEAR: 'Fiscal New Year',
+    PROMOTION:"Promotion",
+    ACTING_START:"Acting Start",
+    ACTING_STOP:"Acting Stop",
+    ACTING_ANNIVERSARY: 'Acting Anniversary',
+    LWOP_START:"LWoP Start",
+    LWOP_STOP:"LWoP Stop",
+    OVERTIME:"Overtime",
+    LUMPSUM:"Lumpsum"
+}
 //endregion
 
 //#region Helpers
@@ -917,7 +933,72 @@ function generateRateTables(rates) {
 
 
 function generatePayTables(periods){
-    return false
+    const table = document.getElementById("resultsTable");
+    const tableBody = table.querySelector("tbody");
+    const tableFooter = table.querySelector("tfoot");
+
+    let totalEarned = 0;
+    let totalOwed = 0;
+    // Clear previous rows (except headers, if any)
+    tableBody.innerHTML = "";
+    tableFooter.innerHTML = "";
+
+    function addRowForPeriod(period, isOneTimeEvent = false) {
+        // Create a new row for the table
+        let row = createHTMLElement("tr", { parentNode: tableBody });
+        const periodLevel = period.level;
+        const periodStep = period.step;
+
+        // Create the Period cell with start and end date, and add the period type in a separate paragraph
+        let periodCell = createHTMLElement("td", { parentNode: row });
+        createHTMLElement("p", { parentNode: periodCell, textNode: `${period.startDate.toISODateString()} to ${period.endDate.toISODateString()}` });
+        createHTMLElement("p", { parentNode: periodCell, textNode: period.types.join(" & "), class: "small" });
+
+        // TODO: CA *should * always be associated with this set of periods, but it's not guaranteed to be. YOLO
+        // TODO: Find a way to sneak in the Rates["current"] into here
+        // Display over time and lump sum as hourly rates of pay
+        const rateOfPayText = (period.type === EventType.OVERTIME || period.type === EventType.LUMPSUM)
+            ? `$${period.rate.hourly[periodLevel][periodStep]} / hour`
+            : `$${CA.salaries[periodLevel][periodStep]} / year --> $${period.rate.annual[periodLevel][periodStep]} / year`;
+        // Create cells for each of the other columns in the row
+        createHTMLElement("td", { parentNode: row, textNode: `${classification}-${+periodLevel+1}, Step:${periodStep}`}); // Effective Level
+        createHTMLElement("td", { parentNode: row, textNode: rateOfPayText }); // Rate of Pay
+        createHTMLElement("td", { parentNode: row, textNode: `(Not Yet)`}); // Time
+        createHTMLElement("td", { parentNode: row, textNode: `$${period.earned}` }); // What You Made
+        createHTMLElement("td", { parentNode: row, textNode: `$${period.owed}` }); // What You Should Have Made
+        createHTMLElement("td", { parentNode: row, textNode: `$${period.owed - period.earned}` }); // Backpay Amount
+
+        if (isOneTimeEvent) { row.classList.add("one-time-event"); }
+        totalEarned += period.earned;
+        totalOwed += period.owed;
+    }
+
+
+    periods.forEach((period) => {
+        // Add the main period row
+        addRowForPeriod(period);
+
+        // If the period has one-time events, add those rows as well
+        if (Array.isArray(period.oneTimeEvents) && period.oneTimeEvents.length > 0) {
+            period.oneTimeEvents.forEach((oneTimeEvent) => {
+                addRowForPeriod(oneTimeEvent, true); // Mark as one-time event
+            });
+        }
+    });
+
+    // Create the footer row to display total earned, total owed, and backpay
+    let footerRow = createHTMLElement("tr", { parentNode: tableFooter });
+    footerRow.classList.add("table-footer");
+
+    // Create the merged "Total" cell that spans the first four columns and right-aligns the text
+    let mergedTotalCell = createHTMLElement("td", { parentNode: footerRow, textNode: "Total", className: "total-label" });
+    mergedTotalCell.setAttribute("colspan", "4");
+    mergedTotalCell.style.textAlign = "right";
+
+    // Create cells for total earned, total owed, and backpay
+    createHTMLElement("td", { parentNode: footerRow, textNode: `$${totalEarned}` }); // Total Earned
+    createHTMLElement("td", { parentNode: footerRow, textNode: `$${totalOwed}` }); // Total Owed
+    createHTMLElement("td", { parentNode: footerRow, textNode: `$${(totalOwed - totalEarned)}` }); // Backpay Amount
 }
 
 export { generateRateTables, generatePayTables };
