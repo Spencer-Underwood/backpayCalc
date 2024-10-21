@@ -6,7 +6,7 @@ import {i18n} from "./i18n.js";
 import {StartProcess} from "./backpayCalc.js";
 
 //#region variables
-let dbug = true;
+let dbug = false;
 // Collective Agreement variables
 let group = null;
 let classification = null;
@@ -1096,26 +1096,20 @@ function main() {
 	lang = document.documentElement.lang;
 	console.debug("Got lang:", lang);
 
-	if (dbug === false) {
-		populateSelect(document.getElementById("groupSelect"), Object.keys(data).map(group => ({ text: group, value: group })), null, "Select the group");
-	} else {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.toString()) {
+        console.log("Found URL parameters:", urlParams.toString());
+        // Handle the URL parameters here if needed
         loadDataFromUrl(testingURL);
-		// group="IT Group";
-		// classification = "IT";
-		// chosenCA = "2021-2025";
-		// CA = data[group][classification][chosenCA];
-		// CA.levels = 5;
-		// level=0;
-		// step=0;
-		// document.getElementById("startDateTxt").value="2022-01-01";
-        //
-		// populateGroupSelect ("IT Group");
-		// populateClassificationSelect("IT");
-		// populateCASelect("2021-2025");
-		// // generateTables(CA);
-		// populateLevelSelect(0);
-		// populateStepSelect(0);
-	}
+    } else {
+        if (dbug === false) {
+		    populateSelect(document.getElementById("groupSelect"), Object.keys(data).map(group => ({ text: group, value: group })), null, "Select the group");
+        } else {
+            loadDataFromUrl(testingURL);
+        }
+    }
+
+
 
 
     setupEventListeners();  // Moved all event listener setup to a separate function
