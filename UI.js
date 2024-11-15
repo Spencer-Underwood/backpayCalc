@@ -70,7 +70,7 @@ function createHTMLElement (type, attribs) {
 	let newEl = document.createElement(type);
 	//This used to use a var mainForm, but I localized it to just access the element directly
 	document.getElementById("mainForm").appendChild(newEl);
-    console.debug(`Creating HTML element of type: ${type} with attributes:`, attribs);
+    // console.debug(`Creating HTML element of type: ${type} with attributes:`, attribs);
 
 	let dbug = (arguments.length == 3 &&arguments[2] != null && arguments[2] != false ? true : false);
 	for (let k in attribs) {
@@ -951,8 +951,8 @@ function generatePayTables(periods){
         const periodLevel = period.level;
         const periodStep = period.step;
 
-        const CADaily = (CA.salaries[periodLevel][periodStep] / DaysInYear).toFixed(2);
-        const CAHourly = (CA.salaries[periodLevel][periodStep] / WeeksInYear / CA.hoursPerWeek).toFixed(2);
+        const CADaily = (CA.salaries[periodLevel][periodStep] / DaysInYear);
+        const CAHourly = (CA.salaries[periodLevel][periodStep] / WeeksInYear / CA.hoursPerWeek);
 
         // Create the Period cell with start and end date, and add the period type in a separate paragraph
         let periodCell = createHTMLElement("td", { parentNode: row });
@@ -963,15 +963,15 @@ function generatePayTables(periods){
         // TODO: Find a way to sneak in the Rates["current"] into here
         // Display over time and lump sum as hourly rates of pay
         const rateOfPayText = (period.type === EventType.OVERTIME || period.type === EventType.LUMPSUM)
-            ? `$${CAHourly}/hr --> ${period.rate.hourly[periodLevel][periodStep]}/hr`
-            : `$${CADaily}/day --> $${period.rate.daily[periodLevel][periodStep]}/day`;
+            ? `${getNum(CAHourly)}/hr --> ${getNum(period.rate.hourly[periodLevel][periodStep])}/hr`
+            : `${getNum(CADaily)}/day --> ${getNum(period.rate.daily[periodLevel][periodStep])}/day`;
         // Create cells for each of the other columns in the row
         createHTMLElement("td", { parentNode: row, textNode: `${classification}-${+periodLevel+1}, Step:${periodStep}`}); // Effective Level
         createHTMLElement("td", { parentNode: row, textNode: rateOfPayText }); // Rate of Pay
         createHTMLElement("td", { parentNode: row, textNode: `${period.time} ${isOneTimeEvent ? 'hours' : 'days'}`  }); // Time
-        createHTMLElement("td", { parentNode: row, textNode: `$${period.earned}` }); // What You Made
-        createHTMLElement("td", { parentNode: row, textNode: `$${period.owed}` }); // What You Should Have Made
-        createHTMLElement("td", { parentNode: row, textNode: `$${period.owed - period.earned}` }); // Backpay Amount
+        createHTMLElement("td", { parentNode: row, textNode: `${getNum(period.earned)}` }); // What You Made
+        createHTMLElement("td", { parentNode: row, textNode: `${getNum(period.owed)}` }); // What You Should Have Made
+        createHTMLElement("td", { parentNode: row, textNode: `${getNum(period.owed - period.earned)}` }); // Backpay Amount
 
         if (isOneTimeEvent) { row.classList.add("one-time-event"); }
         totalEarned += period.earned;
@@ -1093,6 +1093,7 @@ function setupEventListeners() {
 let testingURL = "/backpayCalc/backpayCalc.html?group=IT+Group&classification=IT&collective-agreement=2021-2025&level=0&start-date=2020-01-01&step=0&end-date=2026-01-01"
 testingURL = "/backpayCalc/backpayCalc.html?group=IT+Group&classification=IT&collective-agreement=2021-2025&level=0&start-date=2020-01-01&step=0&end-date=2026-01-01&promotion-date-0=2023-06-08&promotion-level-0=1&acting-from-0=2021-12-15&acting-to-0=2022-01-15&acting-level-0=2"
 testingURL = "/backpayCalc/backpayCalc.html?group=IT+Group&classification=IT&collective-agreement=2021-2025&level=0&start-date=2020-01-01&step=0&end-date=2026-01-01&promotion-date-0=2023-06-08&promotion-level-0=1&acting-from-0=2021-12-15&acting-to-0=2022-01-15&acting-level-0=2&lwop-from-0=2023-12-02&lwop-to-0=2023-12-12&overtime-date-0=2022-02-02&overtime-amount-0=100&overtime-rate-0=1.5&lumpsum-date-0=2022-02-03&lumpsum-amount-0=100"
+testingURL = "/backpayCalc/backpayCalc.html?group=CFIA-IN+Group&classification=CS&collective-agreement=2021-2025&level=1&start-date=2015-02-03&step=7&end-date=2026-01-01&overtime-date-0=2024-02-02&overtime-amount-0=100&overtime-rate-0=1.5&lumpsum-date-0=2024-02-03&lumpsum-amount-0=5"
 
 function main() {
 	console.log("Got data:", data);
@@ -1105,7 +1106,7 @@ function main() {
     if (urlParams.toString()) {
         console.log("Found URL parameters:", urlParams.toString());
         // Handle the URL parameters here if needed
-        loadDataFromUrl(testingURL);
+        loadDataFromUrl(window.location.href);
     } else {
         if (dbug === false) {
 		    populateSelect(document.getElementById("groupSelect"), Object.keys(data).map(group => ({ text: group, value: group })), null, "Select the group");
@@ -1113,9 +1114,6 @@ function main() {
             loadDataFromUrl(testingURL);
         }
     }
-
-
-
 
     setupEventListeners();  // Moved all event listener setup to a separate function
 } // End of main
