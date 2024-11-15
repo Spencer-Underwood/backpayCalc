@@ -98,7 +98,7 @@ function findMatchingActingEvent(events, event) {
 
 // Like events, but has a definitive start and end date and can include payments for lumpsum and OT payments
 class Period {
-    constructor({ type = [], startDate = null, endDate = null, level = null, step = null, earned = 0, owed = 0, rate = 1, oneTimeEvents = []} = {})
+    constructor({ type = [], startDate = null, endDate = null, level = null, step = null, earned = 0, owed = 0, rate = 1, time = 0, oneTimeEvents = []} = {})
     {
         // Initialize properties with default values if none provided
         this.types = Array.isArray(type) ? type : [type]; // Ensure it's always an array
@@ -109,6 +109,7 @@ class Period {
         this.earned = earned;
         this.owed = owed;
         this.rate = rate;
+        this.time = time; // Used for the "time" column in the pay periods table, unit less
         this.oneTimeEvents = oneTimeEvents;
     }
 
@@ -533,6 +534,7 @@ function calculatePayPeriods(CA, events, rates){
             }
         }
         let salaryDays = weekdaysBetween(currentDate, nextEvent.date);
+        thisPeriod.time = salaryDays;
         if (actingLevel !== null && actingLevel !== undefined && actingStep !== null && actingStep !== undefined) {
             thisPeriod.earned = salaryDays * rates["current"].daily[actingLevel][actingStep];
             thisPeriod.owed = salaryDays * currentRate.daily[actingLevel][actingStep];
@@ -564,6 +566,7 @@ function calculatePayPeriods(CA, events, rates){
             startDate: event.date,
             endDate: event.date,
             rate: currentRate,
+            time: event.amount,
             level: matchingPeriod.level,
             step: matchingPeriod.step
         });

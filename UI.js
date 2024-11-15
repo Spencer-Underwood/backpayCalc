@@ -6,7 +6,7 @@ import {i18n} from "./i18n.js";
 import {StartProcess} from "./backpayCalc.js";
 
 //#region variables
-let dbug = false;
+let dbug = true;
 // Collective Agreement variables
 let group = null;
 let classification = null;
@@ -16,6 +16,7 @@ let level = -1;
 let step = -1;
 
 let lang = "en"
+
 
 const SectionTypes = {
     PROMOTION:"promotion",
@@ -50,6 +51,9 @@ const EventType = {
 //endregion
 
 //#region Helpers
+const DaysInYear = 260.88;
+const WeeksInYear = 52.176;
+
 Date.prototype.toISODateString = function() {
 	return this.toISOString().split('T')[0];
 };
@@ -930,8 +934,6 @@ function generateRateTables(rates) {
     console.info("Generated tables for:", CA);
 }
 
-
-
 function generatePayTables(periods){
     const table = document.getElementById("resultsTable");
     const tableBody = table.querySelector("tbody");
@@ -949,6 +951,9 @@ function generatePayTables(periods){
         const periodLevel = period.level;
         const periodStep = period.step;
 
+        const CADaily = (CA.salaries[periodLevel][periodStep] / DaysInYear).toFixed(2);
+        const CAHourly = (CA.salaries[periodLevel][periodStep] / WeeksInYear / CA.hoursPerWeek).toFixed(2);
+
         // Create the Period cell with start and end date, and add the period type in a separate paragraph
         let periodCell = createHTMLElement("td", { parentNode: row });
         createHTMLElement("p", { parentNode: periodCell, textNode: `${period.startDate.toISODateString()} to ${period.endDate.toISODateString()}` });
@@ -958,12 +963,12 @@ function generatePayTables(periods){
         // TODO: Find a way to sneak in the Rates["current"] into here
         // Display over time and lump sum as hourly rates of pay
         const rateOfPayText = (period.type === EventType.OVERTIME || period.type === EventType.LUMPSUM)
-            ? `$${period.rate.hourly[periodLevel][periodStep]} / hour`
-            : `$${CA.salaries[periodLevel][periodStep]} / year --> $${period.rate.annual[periodLevel][periodStep]} / year`;
+            ? `$${CAHourly}/hr --> ${period.rate.hourly[periodLevel][periodStep]}/hr`
+            : `$${CADaily}/day --> $${period.rate.daily[periodLevel][periodStep]}/day`;
         // Create cells for each of the other columns in the row
         createHTMLElement("td", { parentNode: row, textNode: `${classification}-${+periodLevel+1}, Step:${periodStep}`}); // Effective Level
         createHTMLElement("td", { parentNode: row, textNode: rateOfPayText }); // Rate of Pay
-        createHTMLElement("td", { parentNode: row, textNode: `(Not Yet)`}); // Time
+        createHTMLElement("td", { parentNode: row, textNode: `${period.time} ${isOneTimeEvent ? 'hours' : 'days'}`  }); // Time
         createHTMLElement("td", { parentNode: row, textNode: `$${period.earned}` }); // What You Made
         createHTMLElement("td", { parentNode: row, textNode: `$${period.owed}` }); // What You Should Have Made
         createHTMLElement("td", { parentNode: row, textNode: `$${period.owed - period.earned}` }); // Backpay Amount
