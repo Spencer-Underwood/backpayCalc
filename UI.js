@@ -966,7 +966,7 @@ function generatePayTables(periods){
             ? `${getNum(CAHourly)}/hr --> ${getNum(period.rate.hourly[periodLevel][periodStep])}/hr`
             : `${getNum(CADaily)}/day --> ${getNum(period.rate.daily[periodLevel][periodStep])}/day`;
         // Create cells for each of the other columns in the row
-        createHTMLElement("td", { parentNode: row, textNode: `${classification}-${+periodLevel+1}, Step:${periodStep+1}`}); // Effective Level
+        createHTMLElement("td", { parentNode: row, textNode: `${classification}-${+periodLevel+1}, Step:${+periodStep+1}`}); // Effective Level
         createHTMLElement("td", { parentNode: row, textNode: rateOfPayText }); // Rate of Pay
         createHTMLElement("td", { parentNode: row, textNode: `${period.time} ${isOneTimeEvent ? 'hours' : 'days'}`  }); // Time
         createHTMLElement("td", { parentNode: row, textNode: `${getNum(period.earned)}` }); // What You Made
