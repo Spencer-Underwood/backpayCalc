@@ -6,7 +6,7 @@ import {i18n} from "./i18n.js";
 import {StartProcess} from "./backpayCalc.js";
 
 //#region variables
-let dbug = true;
+let dbug = false;
 // Collective Agreement variables
 let group = null;
 let classification = null;
