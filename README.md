@@ -1,7 +1,7 @@
 # backpayCalc
 To calculate estimates for retropay / backpay whenever a union signs a new collective agreement.
 
-See on  [GitHub Pages](https://spencer-underwood.github.io/backpayCalc/backpayCalc.html) (repo here: https://spencer-underwood.github.io/backpayCalc/backpayCalc.html)
+See on  [GitHub Pages](https://spencer-underwood.github.io/backpayCalc/backpayCalc.html) (repo here: [https://spencer-underwood.github.io/backpayCalc/backpayCalc.html](https://github.com/Spencer-Underwood/backpayCalc))
 
 This project was forked off of the Backpay Calculator found at https://github.com/andrewnordlund/backpayCalc
 
