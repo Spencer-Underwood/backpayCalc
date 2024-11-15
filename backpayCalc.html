@@ -15,7 +15,7 @@
         <!-- <li><a href="#resultsDiv">Skip to Results</a></li> -->
     </ul>
     <header>
-        <h1>Backpay Calculator for TBS Collective Agreements</h1>
+        <h1>Backpay Estimator for TBS Collective Agreements</h1>
     </header>
     <main>
         <form id="mainForm" tabindex="-1">
@@ -44,9 +44,7 @@
                 </select>
             </div>
             <div class="fieldHolder">
-                <label class="form-label" for="levelSelect">Select your level on
-                    <time id="levelStartDate">(placeholder)</time>
-                    for your substantive position)</label>
+                <label class="form-label" for="levelSelect">Select your level on <time id="levelStartDate">(the start of your CA)</time> for your substantive position</label>
                 <select class="form-select" name="level" id="levelSelect">
                     <option disabled selected>Select your level</option>
                     <!-- Options will be populated dynamically -->
@@ -59,7 +57,7 @@
                 <input class="form-control" type="date" name="start-date" id="startDateTxt" aria-describedby="dateFormat startDateDesc" value="" required>
             </div>
             <div class="fieldHolder">
-                <label class="form-label" for="stepSelect">Select your salary on <time datetime="2021-12-22" id="calcStartDate">(placeholder)</time> for your substantive position)</label>
+                <label class="form-label" for="stepSelect">Select your salary on <time datetime="2021-12-22" id="calcStartDate">(placeholder)</time> for your substantive position</label>
                 <select class="form-select"  name="step" id="stepSelect" required>
                     <option disabled selected>Select your step</option>
                     <!-- Options will be populated dynamically -->
@@ -141,12 +139,12 @@
     <footer>
         <h2>Note</h2>
         <p>This calculator was built as a hobby and is provided "as is" as proof-of-concept. There is absolutely no guarantee of accuracy, or officialness. It should be used for interest sakes, not as an authority.</p>
-        <p>See a problem? Have a suggestion? <a href="https://github.com/andrewnordlund/backpayCalc/issues">Submit an issue</a>.</p>
+        <p>See a problem? Have a suggestion? <a href="https://github.com/Spencer-Underwood/backpayCalc/issues">Submit an issue</a>.</p>
         <div id="resultStatus" role="status" aria-live="polite" class="invisibleStuff"></div>
         <dl>
             <dt>Last Modified:</dt>
             <dd>
-                <time id="lastModTime" datetime="2023-09-19">2023-09-19</time>
+                <time id="lastModTime" datetime="2024-11-14">2024-11-14</time>
             </dd>
         </dl>
     </footer>

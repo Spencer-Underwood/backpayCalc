@@ -1,4 +1,6 @@
 # backpayCalc
-To calculate backbay whenever the union signs a new collective agreement.
+To calculate estimates for retropay / backpay whenever a union signs a new collective agreement.
 
-See on [Nordburg.ca](https://www.nordburg.ca/calculators/backpayCalc/index.html), [GitHub Pages](https://andrewnordlund.github.io/backpayCalc/index.html) (repo here: https://github.com/andrewnordlund/backpayCalc)
+See on  [GitHub Pages](https://spencer-underwood.github.io/backpayCalc/backpayCalc.html) (repo here: https://spencer-underwood.github.io/backpayCalc/backpayCalc.html)
+
+This calculator was built as a hobby and is provided "as is" as proof-of-concept. There is absolutely no guarantee of accuracy, or officialness. It should be used for interest sakes, not as an authority.
