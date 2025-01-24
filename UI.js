@@ -850,7 +850,7 @@ function startProcess(){}
 
 //#region Exported Functions
 function generateRateTables(rates) {
-    // TODO: handle options or parameters or whatnot
+    // Get the levels and time periods
     let levels = CA.levels;
     let timeps = ["annual", "weekly", "daily", "hourly"];
     let payTablesSection = document.getElementById("payTablesSection");
@@ -864,75 +864,63 @@ function generateRateTables(rates) {
 
     // Create tables for each level
     for (let level = 0; level < levels; level++) {
+        // Create a new section for each level
         let levelText = `${classification}-${level + 1}`;
         let newSection = createHTMLElement("details", { parentNode: payTablesSection, id: `payrateSect${level}` });
         let newSummary = createHTMLElement("summary", { parentNode: newSection });
         createHTMLElement("h3", { parentNode: newSummary, textNode: levelText });
 
-        let yearSect = createHTMLElement("section", { parentNode: newSection, class: "yearSect" });
-        createHTMLElement("h4", { parentNode: yearSect, textNode: `${getStr("current")} (${CA.startDate.toISODateString()})` });
-        let respDiv = createHTMLElement("div", { parentNode: yearSect, class: "tables-responsive" });
-
-        let newTable = createHTMLElement("table", { parentNode: respDiv, class: "table caption-top" });
-        let newTHead = createHTMLElement("thead", { parentNode: newTable });
-        let newTR = createHTMLElement("tr", { parentNode: newTHead });
-
-        // Create table headers for steps using the current rates structure
-        createHTMLElement("td", { parentNode: newTR, textNode: "" });
-        for (let step = 0; step < rates["current"].annual[level].length; step++) {
-            createHTMLElement("th", { parentNode: newTR, textNode: `${getStr("step")} ${step + 1}`, scope: "col" });
-        }
-
-        // Create table body for current salary values
-        let newTBody = createHTMLElement("tbody", { parentNode: newTable });
+        // Iterate over the time periods (annual, weekly, daily, hourly)
         timeps.forEach(t => {
-            let row = createHTMLElement("tr", { parentNode: newTBody });
-            createHTMLElement("th", { parentNode: row, textNode: getStr(t), scope: "row" });
-            for (let step = 0; step < rates["current"][t][level].length; step++) {
-                createHTMLElement("td", { parentNode: row, textNode: getNum(rates["current"][t][level][step]) });
-            }
-        });
-
-        // Iterate over pay periods in the payPeriods object, skipping 'current'
-        for (let period in rates) {
-            if (period === "current") continue;
-
-            let payPeriod = rates[period];
-
+            // Create a section for the current time period (annual, weekly, etc.)
             let newYearSect = createHTMLElement("section", { parentNode: newSection, class: "yearSect" });
-            createHTMLElement("h4", { parentNode: newYearSect, textNode: period });
-            let respDiv = createHTMLElement("div", { parentNode: newYearSect, class: "tables-responsive" });
+            createHTMLElement("h4", { parentNode: newYearSect, textNode: getStr(t) });
 
+            let respDiv = createHTMLElement("div", { parentNode: newYearSect, class: "tables-responsive" });
             let newTable = createHTMLElement("table", { parentNode: respDiv, class: "table caption-top" });
             let newTHead = createHTMLElement("thead", { parentNode: newTable });
             let newTR = createHTMLElement("tr", { parentNode: newTHead });
 
-            createHTMLElement("td", { parentNode: newTR, textNode: "" });
-            for (let step = 0; step < payPeriod.annual[level].length; step++) {
+            // Create table headers for steps using the current rates structure
+            createHTMLElement("th", { parentNode: newTR, textNode: "" });  // Empty header for row labels
+            for (let step = 0; step < rates["current"][t][level].length; step++) {
                 createHTMLElement("th", { parentNode: newTR, textNode: `${getStr("step")} ${step + 1}`, scope: "col" });
             }
 
+            // Create table body for pay periods (current, 2022, etc.)
             let newTBody = createHTMLElement("tbody", { parentNode: newTable });
-            timeps.forEach(t => {
+
+            // Add the "current" row as the base rate
+            let currentPayPeriod = rates["current"];
+            let currentRow = createHTMLElement("tr", { parentNode: newTBody });
+            createHTMLElement("th", { parentNode: currentRow, textNode: getStr("current"), scope: "row" });
+
+            // Add the steps for the current period (e.g., base annual salary)
+            for (let step = 0; step < currentPayPeriod[t][level].length; step++) {
+                createHTMLElement("td", { parentNode: currentRow, textNode: getNum(currentPayPeriod[t][level][step]) });
+            }
+
+            // Iterate over the periods (2022, 2023, etc.) and add rows for each
+            for (let period in rates) {
+                if (period === "current") continue;  // Skip "current" as it's already added
+
+                let payPeriod = rates[period];
+
+                // Create a row for the period (2022, etc.)
                 let row = createHTMLElement("tr", { parentNode: newTBody });
-                createHTMLElement("th", { parentNode: row, textNode: getStr(t), scope: "row" });
+                createHTMLElement("th", { parentNode: row, textNode: period, scope: "row" });
+
+                // Add the steps for this period (for the current time period, e.g., "annual")
                 for (let step = 0; step < payPeriod[t][level].length; step++) {
                     createHTMLElement("td", { parentNode: row, textNode: getNum(payPeriod[t][level][step]) });
                 }
-            });
-
-            // TODO: Add inflation / CPI stuff to the info section here
-            let infoSect = createHTMLElement("section", { parentNode: newYearSect });
-            createHTMLElement("h5", { parentNode: infoSect, textNode: getStr("info") });
-            let infoDL = createHTMLElement("dl", { parentNode: infoSect });
-            createHTMLElement("dt", { parentNode: infoDL, textNode: getStr("payrateIncr") });
-            createHTMLElement("dd", { parentNode: infoDL, textNode: payPeriod.increments[level] + " %" });
-            createHTMLElement("dt", { parentNode: infoDL, textNode: getStr("payrateTotalIncr") });
-            createHTMLElement("dd", { parentNode: infoDL, textNode: payPeriod.compounded[level] + " %" });
-        }
+            }
+        });
     }
+
     console.info("Generated tables for:", CA);
 }
+
 
 function generatePayTables(periods){
     const table = document.getElementById("resultsTable");
